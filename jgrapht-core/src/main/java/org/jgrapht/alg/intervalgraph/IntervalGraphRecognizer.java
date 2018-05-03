@@ -51,7 +51,7 @@ public final class IntervalGraphRecognizer<V, E>
      */
     public IntervalGraphRecognizer(Graph<V, E> graph)
     {
-        isIntervalGraph(graph);
+        this.isIntervalGraph = isIntervalGraph(graph);
     }
 
     /**
@@ -73,27 +73,23 @@ public final class IntervalGraphRecognizer<V, E>
         // sweep
         HashMap<V, Integer> sweepAlpha =
             lexBreadthFirstSearch(graph, randomElementOf(graph.vertexSet()));
-        V vertexA = lastElementOf(sweepAlpha);
 
         // Step 2 - LBFS+ from the last vertex of the previous sweep
         // Input - the result of previous sweep alpha, vertex a
         // Output - the result of current sweep beta, further last vertex b visited by current sweep
-        HashMap<V, Integer> sweepBeta = lexBreadthFirstSearchPlus(graph, vertexA, sweepAlpha);
-        V vertexB = lastElementOf(sweepBeta);
+        HashMap<V, Integer> sweepBeta = lexBreadthFirstSearchPlus(graph, sweepAlpha);
 
         // Step 3 - LBFS+ from the last vertex of the previous sweep
         // Input - the result of previous sweep beta, vertex b
         // Output - the result of current sweep gamma, further last vertex c visited by current
         // sweep
-        HashMap<V, Integer> sweepGamma = lexBreadthFirstSearchPlus(graph, vertexB, sweepBeta);
-        V vertexC = lastElementOf(sweepGamma);
+        HashMap<V, Integer> sweepGamma = lexBreadthFirstSearchPlus(graph, sweepBeta);
 
         // Step 4 - LBFS+ from the last vertex of the previous sweep
         // Input - the result of previous sweep gamma, vertex c
         // Output - the result of current sweep delta, further last vertex d visited by current
         // sweep
-        HashMap<V, Integer> sweepDelta = lexBreadthFirstSearchPlus(graph, vertexC, sweepGamma);
-        V vertexD = lastElementOf(sweepDelta);
+        HashMap<V, Integer> sweepDelta = lexBreadthFirstSearchPlus(graph, sweepGamma);
 
         // Additionally, calculate the index and the corresponding A set for each vertex
 
@@ -101,7 +97,7 @@ public final class IntervalGraphRecognizer<V, E>
         // Input - the result of previous sweep delta, vertex d
         // Output - the result of current sweep epsilon, further last vertex e visited by current
         // sweep
-        HashMap<V, Integer> sweepEpsilon = lexBreadthFirstSearchPlus(graph, vertexD, sweepDelta);
+        HashMap<V, Integer> sweepEpsilon = lexBreadthFirstSearchPlus(graph, sweepDelta);
         // V vertexE = lastElementOf(sweepEpsilon); TODO: not used?
 
         // Additionally, calculate the index and the corresponding B set for each vertex
@@ -110,13 +106,12 @@ public final class IntervalGraphRecognizer<V, E>
         // Input - the result of sweep gamma and sweep epsilon
         // Output - the result of current sweep zeta
         HashMap<V, Integer> sweepZeta =
-            lexBreadthFirstSearchStar(graph, vertexD, sweepDelta, sweepEpsilon);
+            lexBreadthFirstSearchStar(graph, sweepDelta, sweepEpsilon);
 
         // if sweepZeta is umbrella-free, then the graph is interval.
         // otherwise, the graph is not interval
 
         if (isIOrdering(sweepZeta, graph)) {
-            this.isIntervalGraph = true;
 
             // Compute interval representation -- TODO: complete after merge
             HashMap<V, Integer> neighborIndex = new HashMap<>();
@@ -153,13 +148,14 @@ public final class IntervalGraphRecognizer<V, E>
 
             // TODO: build the actual interval graph
             this.intervalRepresentation = null;
+
+            return true;
         } else {
             // set values negatively
-            this.isIntervalGraph = false;
             this.intervalRepresentation = null;
-        }
 
-        return isIOrdering(sweepZeta, graph);
+            return false;
+        }
     }
     
     /**
@@ -171,60 +167,47 @@ public final class IntervalGraphRecognizer<V, E>
      * @param graph the graph we want to check if its an I-Order
      * @return true, if sweep is an I-Order according to graph
      */
+    @SuppressWarnings({"unchecked"})
     private static <V, E> boolean isIOrdering(HashMap<V, Integer> sweep, Graph<V, E> graph)
     {
         // Compute inverse sweep map to quickly find vertices at given indices
-        ArrayList<V> inverseSweep = new ArrayList<>(graph.vertexSet().size());
+        V[] inverseSweep = (V[])new Object[graph.vertexSet().size()];
 
         for (V vertex : graph.vertexSet()) {
             int index = sweep.get(vertex);
-            inverseSweep.set(index, vertex);
+            inverseSweep[index] = vertex;
         }
-        
         // Compute maximal neighbors w.r.t. sweep ordering for every vertex
         HashMap<V, V> maxNeighbors = new HashMap<>(graph.vertexSet().size());
-        
+
         for(V vertex : graph.vertexSet()) {
             List<V> neighbors = Graphs.neighborListOf(graph, vertex);
             V maxNeighbor = vertex;
-            
+
             for(V neighbor : neighbors) {
                 if(sweep.get(neighbor) > sweep.get(maxNeighbor)) {
                     maxNeighbor = neighbor;
                 }
             }
-            
+
             maxNeighbors.put(vertex, maxNeighbor);
         }
-        
+
         // Check if every vertex is connected to all vertices between itself and its maximal neighbor
         for(V vertex : graph.vertexSet()) {
             int index = sweep.get(vertex);
             int maxIndex = sweep.get(maxNeighbors.get(vertex));
-            
+
             for(int i = index; i < maxIndex; i++) {
-                if(!graph.containsEdge(vertex, inverseSweep.get(i))) {
+                if(vertex != inverseSweep[i] && !graph.containsEdge(vertex, inverseSweep[i])) {
                     // Found missing edge
                     return false;
                 }
             }
         }
-        
+
         // No missing edge found
         return true;
-    }
-    
-
-    /**
-     * return the last element of the given map
-     *
-     * @param map
-     * @param <V> the generic type representing vertices
-     * @return
-     */
-    private static <V> V lastElementOf(HashMap<V, Integer> map)
-    {
-        return Collections.max(map.entrySet(), Map.Entry.comparingByValue()).getKey();
     }
 
     /**

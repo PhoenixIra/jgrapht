@@ -97,33 +97,36 @@ public class LexBreadthFirstIterator<V, E> extends AbstractGraphIterator<V, E> {
      *
      * @param graph the graph to be iterated.
      * @param priority the vertex array sorted by their priorities.
-     * @param startingVertex the initial vertex.
      */
-    public LexBreadthFirstIterator(Graph<V, E> graph, HashMap<V, Integer> priority, V startingVertex) {
+    public LexBreadthFirstIterator(Graph<V, E> graph, HashMap<V, Integer> priority) {
         super(graph);
         GraphTests.requireUndirected(graph);
 
         Set<V> copyOfSet = new HashSet<>();
 
         copyOfSet.addAll(graph.vertexSet());
-        bucketList = new BucketList(copyOfSet, new PriorityComparator(priority), startingVertex);
+        bucketList = new BucketList(copyOfSet, new PriorityComparator(priority));
     }
     
     /**
      * Creates new lexicographical breadth-first iterator with a static priority list for {@code graph}.
      *
      * @param graph the graph to be iterated.
-     * @param priority the vertex array sorted by their priorities.
-     * @param startingVertex the initial vertex.
      */
-    public LexBreadthFirstIterator(Graph<V, E> graph, HashMap<V, Integer> priorityA, HashMap<V, Integer> priorityB, HashMap<V, Integer> neighborIndexA, HashMap<V, Integer> neighborIndexB, HashMap<V, Set<V>> ASets, HashMap<V, Set<V>> BSets, V startingVertex) {
+    public LexBreadthFirstIterator(Graph<V, E> graph,
+                                   HashMap<V, Integer> priorityA,
+                                   HashMap<V, Integer> priorityB,
+                                   HashMap<V, Integer> neighborIndexA,
+                                   HashMap<V, Integer> neighborIndexB,
+                                   HashMap<V, Set<V>> ASets,
+                                   HashMap<V, Set<V>> BSets) {
         super(graph);
         GraphTests.requireUndirected(graph);
 
         Set<V> copyOfSet = new HashSet<>();
 
         copyOfSet.addAll(graph.vertexSet());
-        bucketList = new BucketList(copyOfSet, priorityA, priorityB, neighborIndexA, neighborIndexB, ASets, BSets, startingVertex);
+        bucketList = new BucketList(copyOfSet, priorityA, priorityB, neighborIndexA, neighborIndexB, ASets, BSets);
     }
 
     /**
@@ -291,17 +294,14 @@ public class LexBreadthFirstIterator<V, E> extends AbstractGraphIterator<V, E> {
          * @param priorityComparator a comparator which defines a priority for tiebreaking.
          * @param startingVertex the initial vertex.
          */
-        BucketList(Collection<V> vertices, Comparator<V> priorityComparator, V startingVertex) {
+        BucketList(Collection<V> vertices, Comparator<V> priorityComparator) {
             bucketMap = new HashMap<>(vertices.size());
             
             // Split off starting vertex into its own bucket
-            vertices.remove(startingVertex);
-            head = new Bucket(startingVertex, priorityComparator);
-            head.insertBefore(new Bucket(vertices, priorityComparator));
+            head = new Bucket(vertices, priorityComparator);
 
-            bucketMap.put(startingVertex, head);
             for (V vertex : vertices) {
-                bucketMap.put(vertex, head.next);
+                bucketMap.put(vertex, head);
             }
         }
         
@@ -309,10 +309,8 @@ public class LexBreadthFirstIterator<V, E> extends AbstractGraphIterator<V, E> {
          * Creates a {@code BucketList} with a single bucket and all specified {@code vertices} in it.
          *
          * @param vertices the vertices of the graph, that should be stored in the {@code head} bucket.
-         * @param priorityComparator a comparator which defines a priority for tiebreaking.
-         * @param startingVertex the initial vertex.
          */
-        BucketList(Collection<V> vertices, HashMap<V, Integer> priorityA, HashMap<V, Integer> priorityB, HashMap<V, Integer> neighborIndexA, HashMap<V, Integer> neighborIndexB, HashMap<V, Set<V>> ASets, HashMap<V, Set<V>> BSets, V startingVertex) {
+        BucketList(Collection<V> vertices, HashMap<V, Integer> priorityA, HashMap<V, Integer> priorityB, HashMap<V, Integer> neighborIndexA, HashMap<V, Integer> neighborIndexB, HashMap<V, Set<V>> ASets, HashMap<V, Set<V>> BSets) {
             this.neighborIndexA = neighborIndexA;
             this.neighborIndexB = neighborIndexB;
             this.ASets = ASets;
@@ -321,15 +319,11 @@ public class LexBreadthFirstIterator<V, E> extends AbstractGraphIterator<V, E> {
             this.priorityB = priorityB;
             
             bucketMap = new HashMap<>(vertices.size());
-            
-            // Split off starting vertex into its own bucket
-            vertices.remove(startingVertex);
-            head = new Bucket(startingVertex, new PriorityComparator(priorityA), new PriorityComparator(priorityB));
-            head.insertBefore(new Bucket(vertices, new PriorityComparator(priorityA), new PriorityComparator(priorityB)));
 
-            bucketMap.put(startingVertex, head);
+            head = new Bucket(vertices, new PriorityComparator(priorityA), new PriorityComparator(priorityB));
+
             for (V vertex : vertices) {
-                bucketMap.put(vertex, head.next);
+                bucketMap.put(vertex, head);
             }
         }
 
@@ -638,11 +632,11 @@ public class LexBreadthFirstIterator<V, E> extends AbstractGraphIterator<V, E> {
          * @param vertex1 the first vertex to be compared.
          * @param vertex2 the second vertex to be compared.
          * 
-         * @return Returns a positive integer (zero/a negative integer) if the priority of <tt>vertex1</tt> is larger (equal to/smaller) than the one of <tt>vertex2</tt>.
+         * @return Returns a positive integer (zero/a negative integer) if the priority of <tt>vertex1</tt> is smaller (equal to/higher) than the one of <tt>vertex2</tt>.
          */
         public int compare(V vertex1, V vertex2)
         {
-            return (priority.get(vertex1) - priority.get(vertex2));
+            return priority.get(vertex2) - priority.get(vertex1);
         }
     }
 }

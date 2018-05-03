@@ -91,7 +91,7 @@ public class IntervalGraphRecognizerTest {
         builder.addEdge(n - 1, n);
 
         IntervalGraphRecognizer<Integer, DefaultEdge> recognizer = new IntervalGraphRecognizer<>(builder.build());
-        assertFalse(recognizer.isIntervalGraph());
+        assertEquals("n was " + n, n <= 4, recognizer.isIntervalGraph());
     }
 
     /**
@@ -234,7 +234,7 @@ public class IntervalGraphRecognizerTest {
     @Test
     public void linearGraphTest()
     {
-        for(int i=0; i<20; i++) {
+        for(int i=4; i<20; i++) {
             isLinearAnIntervalGraph(i);
         }
             
