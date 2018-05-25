@@ -128,7 +128,7 @@ public class IntervalGraphDecompositionTest
         }
         
         //compute decomposition
-        IntervalGraphDecomposition<Integer,Integer> decomp = IntervalGraphDecomposition.<Integer,DefaultEdge>create(g);
+        IntervalGraphNiceDecomposition<Integer,Integer> decomp = IntervalGraphNiceDecomposition.<Integer,DefaultEdge>create(g);
         assertNotNull("graph was detected as not an interval graph", decomp);
         
         //test for nice decomposition
@@ -178,7 +178,7 @@ public class IntervalGraphDecompositionTest
         {
             list.add(new Interval<Integer>(10,10+i));
         }
-        IntervalGraphDecomposition<Integer,Interval<Integer>> decompalg = IntervalGraphDecomposition.<Integer>create(list);
+        IntervalGraphNiceDecomposition<Integer,Interval<Integer>> decompalg = IntervalGraphNiceDecomposition.<Integer>create(list);
         Graph<Integer,DefaultEdge> decomp = decompalg.getDecomposition();
         Map<Integer,Set<Interval<Integer>>> map = decompalg.getMap();
         Integer root = decompalg.getRoot();

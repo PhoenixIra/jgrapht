@@ -21,11 +21,14 @@ import org.jgrapht.Graph;
 import org.jgrapht.GraphPath;
 import org.jgrapht.Graphs;
 import org.jgrapht.alg.interfaces.VertexColoringAlgorithm;
+import org.jgrapht.alg.treedecomposition.*;
+import org.jgrapht.alg.util.*;
 import org.jgrapht.graph.AsUndirectedGraph;
 import org.jgrapht.graph.GraphWalk;
 import org.jgrapht.traverse.GraphIterator;
 import org.jgrapht.traverse.LexBreadthFirstIterator;
 import org.jgrapht.traverse.MaximumCardinalityIterator;
+import org.openjdk.jmh.generators.core.*;
 
 import java.util.*;
 
@@ -98,6 +101,11 @@ public class ChordalityInspector<V, E> implements VertexColoringAlgorithm<V> {
      */
     private Coloring<V> coloring;
 
+    /**
+     * The builder for the nice tree decomposition of the inspected {@code graph}
+     */
+    private NiceDecompositionBuilder<V> niceDecomposition;
+    
     /**
      * A maximum cardinality independent set of the inspected {@code graph}.
      */
@@ -195,6 +203,16 @@ public class ChordalityInspector<V, E> implements VertexColoringAlgorithm<V> {
     public Coloring<V> getColoring() {
         return lazyComputeColoring();
     }
+    
+    /**
+     * Returns the nice tree decomposition builder 
+     * of the inspected {@code graph}. If the graph isn't chordal, returns null. 
+     *
+     * @return a nice tree decomposition builder of the {@code graph} if it is chordal, null otherwise.
+     */
+    public NiceDecompositionBuilder<V> getNiceDecomposition() {
+        return lazyComputeNiceDecomposition();
+    }
 
     /**
      * Returns a <a href = "http://mathworld.wolfram.com/MaximumIndependentVertexSet.html">
@@ -277,6 +295,61 @@ public class ChordalityInspector<V, E> implements VertexColoringAlgorithm<V> {
         }
         return coloring;
 
+    }
+    
+    /**
+     * Lazily computed the nice decomposition builder of the graph. Returns null if the graph isn't chordal.
+     * 
+     * @return nice decomposition builder if it is chordal, null otherwise.
+     */
+    private NiceDecompositionBuilder<V> lazyComputeNiceDecomposition() {
+        if(niceDecomposition == null) {
+            isChordal();
+            
+            if(chordal) {
+                //init
+                niceDecomposition = new NiceDecompositionBuilder<>();
+                Map<V,Integer> vertexInOrder = getVertexInOrder(order);
+                V vertex = null;
+                Integer decompVertex = niceDecomposition.getRoot();
+                
+                //iterate from last to first
+                for(int i = order.size()-1; i >= 0; i--) {
+                    vertex = order.get(i);
+                    Set<V> successor = getSuccessors(vertexInOrder, vertex);
+                    
+                    
+                    //can we use the last decomposition set?
+                    Set<V> intersection = new HashSet<V>(niceDecomposition.getMap().get(decompVertex));
+                    intersection.retainAll(successor);
+                    
+                    //no! search for new one and create join node
+                    if(intersection.isEmpty())
+                    {
+                        for(Integer oldDecompVertex : niceDecomposition.getMap().keySet()) {
+                            successor = getSuccessors(vertexInOrder, vertex);
+                            intersection = new HashSet<V>(niceDecomposition.getMap().get(oldDecompVertex));
+                            intersection.retainAll(successor);
+                            if(!intersection.isEmpty()) {
+                                decompVertex = niceDecomposition.addJoin(oldDecompVertex).getFirst();
+                                break;
+                            }
+                        }
+                        //only root is possible (i.e. it is unconnected)
+                        if(intersection.isEmpty())
+                            decompVertex = niceDecomposition.addJoin(niceDecomposition.getRoot()).getFirst();
+                    }
+                    
+                    //first remove unnecessary nodes
+                    for(V forget : intersection) {
+                        decompVertex = niceDecomposition.addForget(forget, decompVertex);
+                    }
+                    //now add new node!
+                    decompVertex = niceDecomposition.addIntroduce(vertex, decompVertex);
+                }
+            }
+        }
+        return niceDecomposition;
     }
 
     /**
@@ -518,6 +591,28 @@ public class ChordalityInspector<V, E> implements VertexColoringAlgorithm<V> {
             }
         }
         return predecessors;
+    }
+    
+    /**
+     * Returns the successors of {@code vertex} in the order defined by {@code map}. More precisely,
+     * returns those of {@code vertex}, whose mapped index in {@code map} is greater then the index of {@code vertex}.
+     *
+     * @param vertexInOrder defines the mapping of vertices in {@code graph} to their indices in order.
+     * @param vertex        the vertex whose successors in order are to be returned.
+     * @return the successors of {@code vertex} in order defines by {@code map}.
+     */
+    private Set<V> getSuccessors(Map<V, Integer> vertexInOrder, V vertex) {
+        Set<V> successors = new HashSet<>();
+        Integer vertexPosition = vertexInOrder.get(vertex);
+        Set<E> edges = graph.edgesOf(vertex);
+        for (E edge : edges) {
+            V oppositeVertex = Graphs.getOppositeVertex(graph, edge, vertex);
+            Integer destPosition = vertexInOrder.get(oppositeVertex);
+            if (destPosition > vertexPosition) {
+                successors.add(oppositeVertex);
+            }
+        }
+        return successors;
     }
 
     /**
