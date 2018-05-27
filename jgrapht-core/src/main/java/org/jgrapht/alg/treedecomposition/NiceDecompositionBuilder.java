@@ -121,6 +121,26 @@ public class NiceDecompositionBuilder<V>
         return nextVertex;
     }
     
+    /**
+     * Adds to all current leaves in the decomposition forget nodes until only empty sets are leaves
+     */
+    public void leafClosure()
+    {
+        //make leave nodes
+        for(Integer leaf : decompositionMap.keySet()) {
+            //leaf is not a leaf
+            if(Graphs.vertexHasSuccessors(decomposition,leaf))
+                continue;
+            
+            //otherwise add forget until empty set
+            Set<V> vertexSet = decompositionMap.get(leaf);
+            Integer current = leaf;
+            for(V forget : vertexSet) {
+                current = addForget(forget, current);
+            }
+        }
+    }
+    
     
     /**
      * getter for the decomposition as an directed graph

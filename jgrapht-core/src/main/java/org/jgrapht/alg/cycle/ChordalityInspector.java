@@ -22,13 +22,11 @@ import org.jgrapht.GraphPath;
 import org.jgrapht.Graphs;
 import org.jgrapht.alg.interfaces.VertexColoringAlgorithm;
 import org.jgrapht.alg.treedecomposition.*;
-import org.jgrapht.alg.util.*;
 import org.jgrapht.graph.AsUndirectedGraph;
 import org.jgrapht.graph.GraphWalk;
 import org.jgrapht.traverse.GraphIterator;
 import org.jgrapht.traverse.LexBreadthFirstIterator;
 import org.jgrapht.traverse.MaximumCardinalityIterator;
-import org.openjdk.jmh.generators.core.*;
 
 import java.util.*;
 
@@ -314,39 +312,56 @@ public class ChordalityInspector<V, E> implements VertexColoringAlgorithm<V> {
                 Integer decompVertex = niceDecomposition.getRoot();
                 
                 //iterate from last to first
-                for(int i = order.size()-1; i >= 0; i--) {
+                for(int i = order.size()-1; i >= 0; i--) 
+                {
                     vertex = order.get(i);
                     Set<V> successor = getSuccessors(vertexInOrder, vertex);
                     
                     
-                    //can we use the last decomposition set?
+                    //Init max search
                     Set<V> intersection = new HashSet<V>(niceDecomposition.getMap().get(decompVertex));
                     intersection.retainAll(successor);
+                    Set<V> maxIntersection = intersection;
+                    Integer maxOldDecompVertex = decompVertex;
                     
-                    //no! search for new one and create join node
-                    if(intersection.isEmpty())
-                    {
-                        for(Integer oldDecompVertex : niceDecomposition.getMap().keySet()) {
-                            successor = getSuccessors(vertexInOrder, vertex);
-                            intersection = new HashSet<V>(niceDecomposition.getMap().get(oldDecompVertex));
-                            intersection.retainAll(successor);
-                            if(!intersection.isEmpty()) {
-                                decompVertex = niceDecomposition.addJoin(oldDecompVertex).getFirst();
-                                break;
-                            }
+                    //search for maximal intersection and create join node if necessary
+                    for(Integer oldDecompVertex : niceDecomposition.getMap().keySet()) {
+                        successor = getSuccessors(vertexInOrder, vertex);
+                        intersection = new HashSet<V>(niceDecomposition.getMap().get(oldDecompVertex));
+                        intersection.retainAll(successor);
+                        if(intersection.size() > maxIntersection.size())
+                        {
+                            maxIntersection = intersection;
+                            maxOldDecompVertex = oldDecompVertex;
                         }
+                    }
+                    
+                    //not a leaf node, thus create join node
+                    if(Graphs.vertexHasSuccessors(niceDecomposition.getDecomposition(),decompVertex))
+                    {
+                        //found some intersection!
+                        if(!maxIntersection.isEmpty()) 
+                            decompVertex = niceDecomposition.addJoin(maxOldDecompVertex).getFirst();
+                    
                         //only root is possible (i.e. it is unconnected)
-                        if(intersection.isEmpty())
+                        if(maxIntersection.isEmpty())
                             decompVertex = niceDecomposition.addJoin(niceDecomposition.getRoot()).getFirst();
                     }
                     
+                    Set<V> toForget = new HashSet<V>(niceDecomposition.getMap().get(decompVertex));
+                    toForget.removeAll(maxIntersection);
+                    
                     //first remove unnecessary nodes
-                    for(V forget : intersection) {
+                    for(V forget : toForget) 
+                    {
                         decompVertex = niceDecomposition.addForget(forget, decompVertex);
                     }
                     //now add new node!
                     decompVertex = niceDecomposition.addIntroduce(vertex, decompVertex);
+
+                    
                 }
+                niceDecomposition.leafClosure();
             }
         }
         return niceDecomposition;
