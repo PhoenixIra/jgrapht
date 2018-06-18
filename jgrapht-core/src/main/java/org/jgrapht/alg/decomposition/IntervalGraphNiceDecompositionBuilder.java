@@ -1,3 +1,20 @@
+/*
+ * (C) Copyright 2016-2018, by Ira Justus Fesefeldt and Contributors.
+ *
+ * JGraphT : a free Java graph-theory library
+ *
+ * This program and the accompanying materials are dual-licensed under
+ * either
+ *
+ * (a) the terms of the GNU Lesser General Public License version 2.1
+ * as published by the Free Software Foundation, or (at your option) any
+ * later version.
+ *
+ * or (per the licensee's choosing)
+ *
+ * (b) the terms of the Eclipse Public License v1.0 as published by
+ * the Eclipse Foundation.
+ */
 package org.jgrapht.alg.decomposition;
 
 import java.util.*;
@@ -7,7 +24,11 @@ import org.jgrapht.intervalgraph.*;
 import org.jgrapht.intervalgraph.interval.*;
 
 /**
- * Class for calculating the nice Tree Decomposition for interval graphs
+ * Class for calculating the nice tree decomposition for interval graphs.
+ * It iterates over the intervals of the graph. For every starting interval, 
+ * an introduce node is added and for every ending interval, a forget node is added.
+ * The resulting decomposition has exactly one introduce node and one forget node for every vertex
+ * and zero join node (thus it is a path decomposition). The complexity of this class depends on the input.
  *
  * @param <T> the value type of the intervals of the interval graph
  * @param <V> the type of the nodes of the input graph
@@ -42,15 +63,12 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
         this.endSort = sortedByEndPoint;
         this.intervalToVertexMap = intervalToVertexMap;
         this.vertexToIntervalMap = vertexToIntervalMap;
-        
-        computeNiceDecomposition();
     }
 
     /**
      * Factory method for creating a nice tree decomposition for interval graphs. This factory
      * method uses general graphs and the IntervalGraphRecognizer to generate a list of intervals
-     * sorted by starting and ending points. The complexity of this method depends on the sorting
-     * algorithm in IntervalGraphRecognizer (probably quasi linear in the number of intervals)
+     * sorted by starting and ending points. The complexity of this method is in O(|V|+|E|).
      * 
      * @param graph the graph which should transformed to an interval graph and then into a
      *        corresponding nice tree decomposition
@@ -71,13 +89,14 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
         for (V key : vertexToIntervalVertexMap.keySet())
             vertexToIntegerMap.put(key, vertexToIntervalVertexMap.get(key).getInterval());
         
-        if (recog.isIntervalGraph())
-            return new IntervalGraphNiceDecompositionBuilder<Integer, V>(
+        if (!recog.isIntervalGraph())
+            return null;
+        IntervalGraphNiceDecompositionBuilder<Integer, V> builder = new IntervalGraphNiceDecompositionBuilder<Integer, V>(
                 recog.getIntervalsSortedByStartingPoint(),
                 recog.getIntervalsSortedByEndingPoint(), recog.getIntervalToVertexMap(),
                 vertexToIntegerMap);
-        else
-            return null;
+        builder.computeNiceDecomposition();
+        return builder;
     }
 
     /**
@@ -111,14 +130,17 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
         ArrayList<Interval<T>> endSort = new ArrayList<>(intervals);
         startSort.sort(Interval.<T> getStartingComparator());
         endSort.sort(Interval.<T> getEndingComparator());
-        return new IntervalGraphNiceDecompositionBuilder<T, V>(
+        IntervalGraphNiceDecompositionBuilder<T, V> builder =
+            new IntervalGraphNiceDecompositionBuilder<T, V>(
             startSort, endSort, intervalToVertexMap, vertexToIntervalMap);
+        builder.computeNiceDecomposition();
+        return builder;
     }
 
     /**
      * Factory method for creating a nice tree decomposition for interval graphs. This factory
      * method needs to lists of intervals, the first sorted after starting points, the second after
-     * ending points The complexity of this method is linear in the number of intervals
+     * ending points The complexity of this method is in O(|Intervals|)
      * 
      * @param sortedByStartPoint a list of all intervals sorted by the starting point
      * @param sortedByEndPoint a list of all intervals sorted by the ending point

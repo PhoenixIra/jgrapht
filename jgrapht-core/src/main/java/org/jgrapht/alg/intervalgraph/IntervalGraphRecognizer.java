@@ -170,11 +170,13 @@ public final class IntervalGraphRecognizer<V, E>
                 this.intervalsSortedByStartingPoint.add(intervals[i]);
             }
             
-            //and a list sorted by the ending points
+            //and a list sorted by the ending points. We iterate over all possible points, which are |V| in total
             for(int i = 0; i <= Collections.max(endpointToInterval.keySet()); i++)
             {
+                //if this point as an endpoint
                 if(endpointToInterval.containsKey(i))
                 {
+                    //add all intervals  with same ending point arbitrary to the list
                     for(Interval<Integer> interval : endpointToInterval.get(i))
                     {
                         this.intervalsSortedByEndingPoint.add(interval);
@@ -284,93 +286,6 @@ public final class IntervalGraphRecognizer<V, E>
     }
 
     /**
-     * Implementation of radix Sort for integers on Intervals after the ending point
-     * 
-     * @param list list of intervals to sort
-     * @return a new sorted list of the intervals sorted after the ending point
-     */
-    private ArrayList<Interval<Integer>> radixSortInteger(List<Interval<Integer>> list)
-    {
-        if(list == null)
-            throw new IllegalArgumentException("List parameter cannot be null.");
-        
-        if(list.isEmpty())
-            return new ArrayList<Interval<Integer>>();
-        
-        ArrayList<Interval<Integer>> positiveList = new ArrayList<Interval<Integer>>(list.size());
-        ArrayList<Interval<Integer>> negativeList = new ArrayList<Interval<Integer>>(list.size());
-        for (Interval<Integer> interval : list) {
-            if (interval.getEnd() < 0)
-                negativeList.add(interval);
-            else
-                positiveList.add(interval);
-        }
-
-        positiveList = radixSortNatural(positiveList);
-        negativeList = radixSortNatural(negativeList);
-        negativeList.addAll(positiveList);
-        return negativeList;
-    }
-
-    /**
-     * Implementation of radix Sort for natural numbers on Intervals after the ending point
-     * 
-     * @param list list of intervals to sort
-     * @return a new sorted list of the intervals sorted after the ending point
-     */
-    private ArrayList<Interval<Integer>> radixSortNatural(List<Interval<Integer>> list)
-    {
-        if(list == null)
-            throw new IllegalArgumentException("List parameter cannot be null.");
-        
-        if(list.isEmpty())
-            return new ArrayList<Interval<Integer>>();
-        
-        ArrayList<Interval<Integer>> intervals = new ArrayList<Interval<Integer>>(list);
-        ArrayList<Interval<Integer>> intervalsTmp =
-            new ArrayList<Interval<Integer>>(intervals.size());
-
-        // init
-        for (int i = 0; i < intervals.size(); i++)
-            intervalsTmp.add(null);
-
-        Interval<Integer> max =
-            Collections.max(intervals, Interval.<Integer> getEndingComparator());
-        int power = 1;
-        // every digit
-        while (max.getEnd() / power > 0) {
-            int[] buckets = new int[10];
-
-            // count all numbers with digit at position exponent
-            for (int i = 0; i < intervals.size(); i++) {
-                int digit = Math.abs((intervals.get(i).getEnd() / power) % 10);
-                buckets[digit]++;
-            }
-
-            // compute position of digits
-            for (int i = 1; i < 10; i++) {
-                buckets[i] += buckets[i - 1];
-            }
-
-            // sort after digit in intervalsTmp
-            for (int i = intervals.size() - 1; i >= 0; i--) {
-                int digit = Math.abs((intervals.get(i).getEnd() / power) % 10);
-                int position = buckets[digit] - 1;
-                buckets[digit] = position;
-                intervalsTmp.set(position, intervals.get(i));
-            }
-
-            // swap both
-            ArrayList<Interval<Integer>> tmp = intervals;
-            intervals = intervalsTmp;
-            intervalsTmp = tmp;
-
-            power *= 10;
-        }
-        return intervals;
-    }
-
-    /**
      * Returns the list of all intervals sorted by ending point, or null, if the graph was not an
      * interval graph.
      * The List will be created with radix sort from getIntervalsSortedByStartingPoint as soon as
@@ -381,9 +296,6 @@ public final class IntervalGraphRecognizer<V, E>
      */
     public ArrayList<Interval<Integer>> getIntervalsSortedByEndingPoint()
     {
-        //if (this.intervalsSortedByEndingPoint == null)
-        //    this.intervalsSortedByEndingPoint =
-        //        radixSortInteger(this.intervalsSortedByStartingPoint);
         return this.intervalsSortedByEndingPoint;
     }
 
