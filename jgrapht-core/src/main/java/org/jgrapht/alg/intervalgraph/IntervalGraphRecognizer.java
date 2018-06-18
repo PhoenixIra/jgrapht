@@ -68,6 +68,7 @@ public final class IntervalGraphRecognizer<V, E>
         // An empty graph is an interval graph.
         if (graph.vertexSet().isEmpty()) {
             this.intervalsSortedByStartingPoint = new ArrayList<>();
+            this.intervalsSortedByEndingPoint = new ArrayList<>();
             return true;
         }
 
@@ -128,6 +129,7 @@ public final class IntervalGraphRecognizer<V, E>
             Interval<Integer>[] intervals =
                 (Interval<Integer>[]) Array.newInstance(Interval.class, graph.vertexSet().size());
             this.intervalsSortedByStartingPoint = new ArrayList<>(graph.vertexSet().size());
+            this.intervalsSortedByEndingPoint = new ArrayList<>(graph.vertexSet().size());
 
             // Initialize the vertex map. Because we know the number of vertices we can make sure
             // the hashmap does not need to rehash by setting the capacity to the number of vertices
@@ -136,6 +138,9 @@ public final class IntervalGraphRecognizer<V, E>
                 new HashMap<>((int) Math.ceil(graph.vertexSet().size() / 0.75));
             this.vertexToIntervalMap =
                 new HashMap<>((int) Math.ceil(graph.vertexSet().size() / 0.75));
+            Map<Integer,Set<Interval<Integer>>> endpointToInterval = 
+                new HashMap<>((int) Math.ceil(graph.vertexSet().size() / 0.75));
+            
 
             // Compute intervals and store them associated by their starting point ...
             for (V vertex : graph.vertexSet()) {
@@ -144,6 +149,17 @@ public final class IntervalGraphRecognizer<V, E>
 
                 intervals[sweepZeta.get(vertex)] = vertexInterval;
 
+                //save the endpoints in a map to generate a list of intervals sorted by their ending point
+                if(endpointToInterval.containsKey(vertexInterval.getEnd()))
+                {
+                    endpointToInterval.get(vertexInterval.getEnd()).add(vertexInterval);
+                }
+                else
+                {
+                    Set<Interval<Integer>> intervalSet = new HashSet<>();
+                    intervalSet.add(vertexInterval);
+                    endpointToInterval.put(vertexInterval.getEnd(),intervalSet);
+                }
                 this.intervalToVertexMap.put(vertexInterval, vertex);
                 this.vertexToIntervalMap.put(vertex, IntervalVertex.of(vertex, vertexInterval));
             }
@@ -152,6 +168,18 @@ public final class IntervalGraphRecognizer<V, E>
             // the graph
             for (int i = 0; i < graph.vertexSet().size(); i++) {
                 this.intervalsSortedByStartingPoint.add(intervals[i]);
+            }
+            
+            //and a list sorted by the ending points
+            for(int i = 0; i <= Collections.max(endpointToInterval.keySet()); i++)
+            {
+                if(endpointToInterval.containsKey(i))
+                {
+                    for(Interval<Integer> interval : endpointToInterval.get(i))
+                    {
+                        this.intervalsSortedByEndingPoint.add(interval);
+                    }
+                }
             }
 
             return true;
@@ -353,12 +381,9 @@ public final class IntervalGraphRecognizer<V, E>
      */
     public ArrayList<Interval<Integer>> getIntervalsSortedByEndingPoint()
     {
-        //
-        if (this.intervalsSortedByStartingPoint == null)
-            return null;
-        if (this.intervalsSortedByEndingPoint == null)
-            this.intervalsSortedByEndingPoint =
-                radixSortInteger(this.intervalsSortedByStartingPoint);
+        //if (this.intervalsSortedByEndingPoint == null)
+        //    this.intervalsSortedByEndingPoint =
+        //        radixSortInteger(this.intervalsSortedByStartingPoint);
         return this.intervalsSortedByEndingPoint;
     }
 

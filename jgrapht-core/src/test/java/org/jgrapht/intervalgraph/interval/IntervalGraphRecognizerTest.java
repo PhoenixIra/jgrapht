@@ -180,10 +180,15 @@ public class IntervalGraphRecognizerTest {
         assertTrue(recognizer.isIntervalGraph());
         
         //also test the sorting algorithm for intervals
-        ArrayList<Interval<Integer>> intervalsStartSort = recognizer.getIntervalsSortedByStartingPoint();
+        Set<Interval<Integer>> intervals = new HashSet<>(recognizer.getIntervalsSortedByStartingPoint());
         ArrayList<Interval<Integer>> intervalsEndSort = recognizer.getIntervalsSortedByEndingPoint();
-        intervalsStartSort.sort(Interval.<Integer>getEndingComparator());
-        assertEquals(intervalsStartSort, intervalsEndSort);
+        assertEquals(recognizer.getIntervalsSortedByStartingPoint().size(), intervalsEndSort.size());
+        for(int i = 1; i < intervalsEndSort.size(); i++)
+        {
+            assertTrue(intervalsEndSort.get(i-1).getEnd() <= intervalsEndSort.get(i).getEnd());
+            assertTrue(intervals.contains(intervalsEndSort.get(i)));
+            assertTrue(intervals.contains(intervalsEndSort.get(i-1)));
+        }
     }
     
     /*
@@ -242,10 +247,16 @@ public class IntervalGraphRecognizerTest {
         assertTrue(recognizer.isIntervalGraph());
         
         //also test the sorting algorithm for intervals
-        ArrayList<Interval<Integer>> intervalsStartSort = recognizer.getIntervalsSortedByStartingPoint();
+        //also test the sorting algorithm for intervals
+        Set<Interval<Integer>> intervals = new HashSet<>(recognizer.getIntervalsSortedByStartingPoint());
         ArrayList<Interval<Integer>> intervalsEndSort = recognizer.getIntervalsSortedByEndingPoint();
-        intervalsStartSort.sort(Interval.<Integer>getEndingComparator());
-        assertEquals(intervalsStartSort, intervalsEndSort);
+        assertEquals(recognizer.getIntervalsSortedByStartingPoint().size(), intervalsEndSort.size());
+        for(int i = 1; i < intervalsEndSort.size(); i++)
+        {
+            assertTrue(intervalsEndSort.get(i-1).getEnd() <= intervalsEndSort.get(i).getEnd());
+            assertTrue(intervals.contains(intervalsEndSort.get(i)));
+            assertTrue(intervals.contains(intervalsEndSort.get(i-1)));
+        }
     }
     
     /*
