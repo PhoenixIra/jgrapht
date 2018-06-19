@@ -24,11 +24,11 @@ import org.jgrapht.intervalgraph.*;
 import org.jgrapht.intervalgraph.interval.*;
 
 /**
- * Class for calculating the nice tree decomposition for interval graphs.
- * It iterates over the intervals of the graph. For every starting interval, 
- * an introduce node is added and for every ending interval, a forget node is added.
- * The resulting decomposition has exactly one introduce node and one forget node for every vertex
- * and zero join node (thus it is a path decomposition). The complexity of this class depends on the input.
+ * Class for calculating the nice tree decomposition for interval graphs. It iterates over the
+ * intervals of the graph. For every starting interval, an introduce node is added and for every
+ * ending interval, a forget node is added. The resulting decomposition has exactly one introduce
+ * node and one forget node for every vertex and zero join node (thus it is a path decomposition).
+ * The complexity of this class depends on the input.
  *
  * @param <T> the value type of the intervals of the interval graph
  * @param <V> the type of the nodes of the input graph
@@ -36,7 +36,9 @@ import org.jgrapht.intervalgraph.interval.*;
  * @author Ira Justus Fesefeldt (PhoenixIra)
  * @since Mai 14, 2018
  */
-public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> extends NiceDecompositionBuilder<V>
+public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V>
+    extends
+    NiceDecompositionBuilder<V>
 {
     // input to the algorithm, list of sorted intervals
     private List<Interval<T>> startSort, endSort;
@@ -59,7 +61,7 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
         Map<Interval<T>, V> intervalToVertexMap, Map<V, Interval<T>> vertexToIntervalMap)
     {
         super();
-        
+
         this.startSort = sortedByStartPoint;
         this.endSort = sortedByEndPoint;
         this.intervalToVertexMap = intervalToVertexMap;
@@ -82,20 +84,21 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
     public static <V, E> IntervalGraphNiceDecompositionBuilder<Integer, V> create(Graph<V, E> graph)
     {
         IntervalGraphRecognizer<V, E> recog = new IntervalGraphRecognizer<>(graph);
-        
+
         HashMap<V, Interval<Integer>> vertexToIntegerMap =
             new HashMap<>(recog.getVertexToIntervalMap().size());
-        
-        Map<V,IntervalVertexInterface<V, Integer>> vertexToIntervalVertexMap = recog.getVertexToIntervalMap();
+
+        Map<V, IntervalVertexInterface<V, Integer>> vertexToIntervalVertexMap =
+            recog.getVertexToIntervalMap();
         for (V key : vertexToIntervalVertexMap.keySet())
             vertexToIntegerMap.put(key, vertexToIntervalVertexMap.get(key).getInterval());
-        
+
         if (!recog.isIntervalGraph())
             return null;
-        IntervalGraphNiceDecompositionBuilder<Integer, V> builder = new IntervalGraphNiceDecompositionBuilder<Integer, V>(
-                recog.getIntervalsSortedByStartingPoint(),
-                recog.getIntervalsSortedByEndingPoint(), recog.getIntervalToVertexMap(),
-                vertexToIntegerMap);
+        IntervalGraphNiceDecompositionBuilder<Integer,
+            V> builder = new IntervalGraphNiceDecompositionBuilder<Integer, V>(
+                recog.getIntervalsSortedByStartingPoint(), recog.getIntervalsSortedByEndingPoint(),
+                recog.getIntervalToVertexMap(), vertexToIntegerMap);
         builder.computeNiceDecomposition();
         return builder;
     }
@@ -133,7 +136,7 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
         endSort.sort(Interval.<T> getEndingComparator());
         IntervalGraphNiceDecompositionBuilder<T, V> builder =
             new IntervalGraphNiceDecompositionBuilder<T, V>(
-            startSort, endSort, intervalToVertexMap, vertexToIntervalMap);
+                startSort, endSort, intervalToVertexMap, vertexToIntervalMap);
         builder.computeNiceDecomposition();
         return builder;
     }
@@ -141,17 +144,20 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
     /**
      * Factory method for creating a nice tree decomposition for interval graphs. This factory
      * method needs to lists of intervals, the first sorted after starting points, the second after
-     * ending points. This method does not check if the two lists are sorted or if they have the same intervals.
-     * If these conditions does not apply, this algorithm behaves arbitrary. The complexity of this method is in O(|Intervals|).
+     * ending points. This method does not check if the two lists are sorted or if they have the
+     * same intervals. If these conditions does not apply, this algorithm behaves arbitrary. The
+     * complexity of this method is in O(|Intervals|).
      * 
      * @param sortedByStartPoint a list of all intervals sorted by the starting point
      * @param sortedByEndPoint a list of all intervals sorted by the ending point
      * @param <T> the value of the intervals
-     * @return the algorithm for the computation of the nice tree decomposition or null if the listed are not sorted
+     * @return the algorithm for the computation of the nice tree decomposition or null if the
+     *         listed are not sorted
      */
-    public static <T extends Comparable<T>> IntervalGraphNiceDecompositionBuilder<T, Interval<T>> create(
-        List<Interval<T>> sortedByStartPoint, List<Interval<T>> sortedByEndPoint)
-    {            
+    public static <
+        T extends Comparable<T>> IntervalGraphNiceDecompositionBuilder<T, Interval<T>> create(
+            List<Interval<T>> sortedByStartPoint, List<Interval<T>> sortedByEndPoint)
+    {
         HashMap<Interval<T>, Interval<T>> identity = new HashMap<>(sortedByStartPoint.size());
         for (Interval<T> interval : sortedByStartPoint) {
             identity.put(interval, interval);
@@ -171,8 +177,9 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
      * @return the algorithm for the computation of the nice tree decomposition
      * @see ArrayList#sort(Comparator)
      */
-    public static <T extends Comparable<T>> IntervalGraphNiceDecompositionBuilder<T, Interval<T>> create(
-        List<Interval<T>> intervals)
+    public static <
+        T extends Comparable<T>> IntervalGraphNiceDecompositionBuilder<T, Interval<T>> create(
+            List<Interval<T>> intervals)
     {
         ArrayList<Interval<T>> startSort = new ArrayList<>(intervals);
         ArrayList<Interval<T>> endSort = new ArrayList<>(intervals);
@@ -182,32 +189,34 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
     }
 
     /**
-     * Main method for computing the nice tree decomposition.
-     * Iterates over the starting points and ending points of the intervals from lowest to highest point.
-     * If a starting point is found, we made a forget node and if an ending point is found, we made an introduce node.
-     * By this we create the path decomposition top-down from the root to the leaf (although introduce/forget is bottom-up defined)
+     * Main method for computing the nice tree decomposition. Iterates over the starting points and
+     * ending points of the intervals from lowest to highest point. If a starting point is found, we
+     * made a forget node and if an ending point is found, we made an introduce node. By this we
+     * create the path decomposition top-down from the root to the leaf (although introduce/forget
+     * is bottom-up defined)
      */
     private void computeNiceDecomposition()
     {
 
         // starting with the root of the tree decomposition
         currentVertex = getRoot();
-        
-        //current ending point to watch for
+
+        // current ending point to watch for
         int endIndex = 0;
 
         // iterate over the starting points from lowest to highest
         for (Interval<T> current : startSort) {
-            // iterate over the ending points from lowest to highest until reaching current start point
+            // iterate over the ending points from lowest to highest until reaching current start
+            // point
             while (endSort.get(endIndex).getEnd().compareTo(current.getStart()) < 0) {
-                //add for every ending point an introduce node
+                // add for every ending point an introduce node
                 V introducedElement = intervalToVertexMap.get(endSort.get(endIndex));
                 currentVertex = addIntroduce(introducedElement, currentVertex);
-                
-                //next ending point
+
+                // next ending point
                 endIndex++;
-            }            
-            //add for every starting point a forget node
+            }
+            // add for every starting point a forget node
             V forgottenElement = intervalToVertexMap.get(current);
             currentVertex = addForget(forgottenElement, currentVertex);
         }
