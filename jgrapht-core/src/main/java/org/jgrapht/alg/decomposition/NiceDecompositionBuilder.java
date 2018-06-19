@@ -25,21 +25,29 @@ import org.jgrapht.graph.*;
 
 /**
  * An abstract builder class for nice tree decompositions. <br>
- * A tree decomposition of a graph G is a tree T and a map b:V(T) &rarr; Set&lt;V(G)&gt;, 
- * which satisfies the properties: 
- * <ul> <li>for every edge e in E(G), there is a node t in V(T) with e is a subset of b(v)</li>
- * <li>for all vertices v in V(G) the set {t &isin; V(T) | v &isin; b(t)} is non-empty and connected in T</li></ul>
+ * A tree decomposition of a graph G is a tree T and a map b:V(T) &rarr; Set&lt;V(G)&gt;, which
+ * satisfies the properties:
+ * <ul>
+ * <li>for every edge e in E(G), there is a node t in V(T) with e is a subset of b(v)</li>
+ * <li>for all vertices v in V(G) the set {t &isin; V(T) | v &isin; b(t)} is non-empty and connected
+ * in T</li>
+ * </ul>
  * <br>
- * A nice tree decomposition is a special tree decomposition, which satisfies the properties: 
- * <ul> <li>for root r &isin; V(T) and leaf l &isin; V(T): b(r)=b(t)=&empty;</li>
- * <li>every non-leaf node t &isin; V(T) is of one of the following three types: 
- * <ul><li>introduce node: t has exactly one child d and b(t) = b(d) &cup; w for some w &isin; V(G)</li>
- * <li>forget node: t has exactly one child d and b(t) &cup; w = b(d) for some w &isin; V(G)\b(t)</li>
- * <li>join node: t has exactly two child d_1, d_2 and b(t)=b(d_1)=b(d_2)</li></ul></ul>
+ * A nice tree decomposition is a special tree decomposition, which satisfies the properties:
+ * <ul>
+ * <li>for root r &isin; V(T) and leaf l &isin; V(T): b(r)=b(t)=&empty;</li>
+ * <li>every non-leaf node t &isin; V(T) is of one of the following three types:
+ * <ul>
+ * <li>introduce node: t has exactly one child d and b(t) = b(d) &cup; w for some w &isin; V(G)</li>
+ * <li>forget node: t has exactly one child d and b(t) &cup; w = b(d) for some w &isin;
+ * V(G)\b(t)</li>
+ * <li>join node: t has exactly two child d_1, d_2 and b(t)=b(d_1)=b(d_2)</li>
+ * </ul>
+ * </ul>
  * <br>
  * See:<br>
- * Bodlaender, Hans &amp; Kloks, Ton. (1991). 
- * Better Algorithms for the Pathwidth and Treewidth of Graphs.. 544-555. 10.1007/3-540-54233-7_162. 
+ * Bodlaender, Hans &amp; Kloks, Ton. (1991). Better Algorithms for the Pathwidth and Treewidth of
+ * Graphs.. 544-555. 10.1007/3-540-54233-7_162.
  * 
  * @author Ira Justus Fesefeldt (PhoenixIra)
  *
@@ -61,9 +69,9 @@ abstract public class NiceDecompositionBuilder<V>
     private Integer nextInteger;
 
     /**
-     * Constructor for all methods used in the abstract method
-     * This constructor instantiates the tree of the decomposition, 
-     * the map from tree vertices to vertex sets and adds the root to the tree. 
+     * Constructor for all methods used in the abstract method This constructor instantiates the
+     * tree of the decomposition, the map from tree vertices to vertex sets and adds the root to the
+     * tree.
      */
     protected NiceDecompositionBuilder()
     {
@@ -79,8 +87,7 @@ abstract public class NiceDecompositionBuilder<V>
     }
 
     /**
-     * Getter for the next free Integer
-     * Supplies the add vertex methods with new vertices
+     * Getter for the next free Integer Supplies the add vertex methods with new vertices
      * 
      * @return unused integer
      */
@@ -91,123 +98,100 @@ abstract public class NiceDecompositionBuilder<V>
 
     /**
      * Method for adding a new join node.<br>
-     * {@code toJoin} J0 is copied two times J1 and J2. 
-     * J0 afterwards becomes the root of the subtree.
-     * J1 becomes the successor of J0 and has the successors of J0 as successor.
-     * J2 becomes a leaf of and successor of J0.
-     *  <br>
-     *  P <br>
-     *  &darr; <br>
-     *  J0 <br>
-     *  &darr; <br>
-     *  S<br>
-     *  is transformed to<br>
-     *  P<br>
-     *  &darr;<br>
-     *  J0 &rarr; J1<br>
-     *  &darr;<br>
-     *  J2<br>
-     *  &darr;<br>
-     *  S<br>
+     * {@code toJoin} J0 is copied two times J1 and J2. J0 afterwards becomes the root of the
+     * subtree. J1 becomes the successor of J0 and has the successors of J0 as successor. J2 becomes
+     * a leaf and the successor of J0. This can be used to make a join node retrospectively to
+     * branch of this node. J1 continues the path while J2 adds another path.
      * 
-     * @param toJoin which nodes should get a join node
+     * @param currentVertex which nodes should get a join node
      * @return the new children of the join node, first element has no children, second element has
      *         the children of toJoin
      */
-    protected Pair<Integer, Integer> addJoin(Integer toJoin)
+    protected Pair<Integer, Integer> addJoin(Integer currentVertex)
     {
-        Set<V> vertexSet = null;
+        Set<V> currentVertexBag = null;
 
         // new
         Integer vertexChildLeft = getNextInteger();
         decomposition.addVertex(vertexChildLeft);
-        vertexSet = new HashSet<V>(decompositionMap.get(toJoin));
-        decompositionMap.put(vertexChildLeft, vertexSet);
+        currentVertexBag = new HashSet<V>(decompositionMap.get(currentVertex));
+        decompositionMap.put(vertexChildLeft, currentVertexBag);
 
         // new current root
         Integer vertexChildRight = getNextInteger();
         decomposition.addVertex(vertexChildRight);
-        vertexSet = new HashSet<V>(decompositionMap.get(toJoin));
-        decompositionMap.put(vertexChildRight, vertexSet);
+        currentVertexBag = new HashSet<V>(decompositionMap.get(currentVertex));
+        decompositionMap.put(vertexChildRight, currentVertexBag);
 
         // redirect all edges to new parent (should be just one!)
-        for (Integer successor : Graphs.successorListOf(decomposition, toJoin)) {
-            decomposition.removeEdge(toJoin, successor);
+        for (Integer successor : Graphs.successorListOf(decomposition, currentVertex)) {
+            decomposition.removeEdge(currentVertex, successor);
             decomposition.addEdge(vertexChildRight, successor);
         }
         // make children of parent vertex
-        decomposition.addEdge(toJoin, vertexChildLeft);
-        decomposition.addEdge(toJoin, vertexChildRight);
+        decomposition.addEdge(currentVertex, vertexChildLeft);
+        decomposition.addEdge(currentVertex, vertexChildRight);
 
         return new Pair<Integer, Integer>(vertexChildLeft, vertexChildRight);
     }
 
     /**
-     * Method for adding introducing nodes. It is only usable if {@code currentVertex} cV is a leaf.
-     * It then adds the new introducing node I as the child of {@code currentVertex}
-     * with the set of {@code currentVertex} plus {@code introducingElement}.
-     * <br>
-     * P<br>
-     * &darr;<br>
-     * cV<br>
-     * is transformed to:<br>
-     * P<br>
-     * &darr;<br>
-     * cV<br>
-     * &darr;<br>
-     * I<br>
+     * Method for adding forget nodes. It is only usable if {@code currentVertex} cV is a leaf. It
+     * then adds the new forget node I as the child of {@code currentVertex} with the set of
+     * {@code currentVertex} plus {@code forgottenElement}.
      * 
-     * 
-     * @param introducingElement the element, which is introduced
-     * @param currentVertex the vertex this element is introduced to
-     * @return the newly created vertex
+     * @param forgottenElement the element, which gets forgotten
+     * @param currentVertex the vertex this element gets forgotten to
+     * @return the newly created vertex, null and no change if either introducedElement is in the
+     *         bag of currentVertex or currentVertex is not a leaf.
      */
-    protected Integer addIntroduce(V introducingElement, Integer currentVertex)
+    protected Integer addForget(V forgottenElement, Integer currentVertex)
     {
-        Set<V> nextVertexSet = new HashSet<>(decompositionMap.get(currentVertex));
-        nextVertexSet.add(introducingElement);
+        if (!Graphs.successorListOf(decomposition, currentVertex).isEmpty())
+            return null;
+        if (decompositionMap.get(currentVertex).contains(forgottenElement))
+            return null;
+
+        Set<V> nextVertexBag = new HashSet<>(decompositionMap.get(currentVertex));
+        nextVertexBag.add(forgottenElement);
         Integer nextVertex = getNextInteger();
         decomposition.addVertex(nextVertex);
         decomposition.addEdge(currentVertex, nextVertex);
-        decompositionMap.put(nextVertex, nextVertexSet);
+        decompositionMap.put(nextVertex, nextVertexBag);
 
         return nextVertex;
     }
 
     /**
-     * Method for adding forget nodes. It is only usable if {@code currentVertex} cV is a leaf.
-     * It then adds the new forget node F as the child of {@code currentVertex}
-     * with the set of {@code currentVertex} minus {@code forgettingElement}.
+     * Method for adding introduce nodes. It is only usable if {@code currentVertex} cV is a leaf.
+     * It then adds the new introduce node F as the child of {@code currentVertex} with the set of
+     * {@code currentVertex} minus {@code introducedElement}.
      * 
-     * <br>
-     * P<br>
-     * &darr;<br>
-     * cV<br>
-     * is transformed to:<br>
-     * P<br>
-     * &darr;<br>
-     * cV<br>
-     * &darr;<br>
-     * F<br>
-     * 
-     * @param forgettingElement the element, which is forgotten
-     * @param currentVertex the vertex this element is forgotten
-     * @return the next vertex
+     * @param introducedElement the element, which is introduced
+     * @param currentVertex the vertex this element is introduced
+     * @return the next vertex, null and no change if either introducedElement is in the bag of
+     *         currentVertex or currentVertex is not a leaf.
      */
-    protected Integer addForget(V forgettingElement, Integer currentVertex)
+    protected Integer addIntroduce(V introducedElement, Integer currentVertex)
     {
-        Set<V> nextVertexSet = new HashSet<>(decompositionMap.get(currentVertex));
-        nextVertexSet.remove(forgettingElement);
+        if (!Graphs.successorListOf(decomposition, currentVertex).isEmpty())
+            return null;
+        if (!decompositionMap.get(currentVertex).contains(introducedElement))
+            return null;
+
+        Set<V> nextVertexBag = new HashSet<>(decompositionMap.get(currentVertex));
+        nextVertexBag.remove(introducedElement);
         Integer nextVertex = getNextInteger();
         decomposition.addVertex(nextVertex);
         decomposition.addEdge(currentVertex, nextVertex);
-        decompositionMap.put(nextVertex, nextVertexSet);
+        decompositionMap.put(nextVertex, nextVertexBag);
 
         return nextVertex;
     }
 
     /**
-     * Adds to all current leaves in the decomposition forget/introduce nodes until only empty sets are leaves.
+     * Adds to all current leaves in the decomposition forget/introduce nodes until only empty sets
+     * are leaves.
      */
     protected void leafClosure()
     {
@@ -218,11 +202,11 @@ abstract public class NiceDecompositionBuilder<V>
             if (Graphs.vertexHasSuccessors(decomposition, leaf))
                 continue;
 
-            // otherwise add forget until empty set
+            // otherwise add nodes until empty set
             Set<V> vertexSet = decompositionMap.get(leaf);
             Integer current = leaf;
             for (V forget : vertexSet) {
-                current = addForget(forget, current);
+                current = addIntroduce(forget, current);
             }
         }
     }
@@ -238,8 +222,8 @@ abstract public class NiceDecompositionBuilder<V>
     }
 
     /**
-     * Returns the map from integer nodes of the tree decomposition {@code getDecomposition()} to the intervals of the 
-     * interval graph as an unmodifiable map
+     * Returns the map from integer nodes of the tree decomposition {@code getDecomposition()} to
+     * the intervals of the interval graph as an unmodifiable map
      * 
      * @return a nodes to interval map
      */

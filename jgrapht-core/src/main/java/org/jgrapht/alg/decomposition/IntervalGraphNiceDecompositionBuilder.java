@@ -52,6 +52,7 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
      * @param sortedByStartPoint the intervals sorted after the starting points
      * @param sortedByEndPoint the intervals sorted after the ending points
      * @param intervalToVertexMap maps intervals to the vertices of the graph (may be the same)
+     * @param vertexToIntervalMap maps vertices of the graph to the intervals (may be the same)
      */
     private IntervalGraphNiceDecompositionBuilder(
         List<Interval<T>> sortedByStartPoint, List<Interval<T>> sortedByEndPoint,
@@ -103,7 +104,7 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
      * Factory method for creating a nice tree decomposition for interval graphs. This factory
      * method extracts the intervals from the interval graph and uses them as an input for the
      * computation. The complexity of this method depends on the sorting algorithm of ArrayList
-     * (probably O(|V| log(|V|))
+     * (O(|V| log(|V|))
      * 
      * @param intervalGraph the input for which a nice tree decomposition should be computed
      * @param <V> the IntervalVertex Type of the interval graph
@@ -140,19 +141,21 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
     /**
      * Factory method for creating a nice tree decomposition for interval graphs. This factory
      * method needs to lists of intervals, the first sorted after starting points, the second after
-     * ending points The complexity of this method is in O(|Intervals|)
+     * ending points. This method does not check if the two lists are sorted or if they have the same intervals.
+     * If these conditions does not apply, this algorithm behaves arbitrary. The complexity of this method is in O(|Intervals|).
      * 
      * @param sortedByStartPoint a list of all intervals sorted by the starting point
      * @param sortedByEndPoint a list of all intervals sorted by the ending point
      * @param <T> the value of the intervals
-     * @return the algorithm for the computation of the nice tree decomposition
+     * @return the algorithm for the computation of the nice tree decomposition or null if the listed are not sorted
      */
     public static <T extends Comparable<T>> IntervalGraphNiceDecompositionBuilder<T, Interval<T>> create(
         List<Interval<T>> sortedByStartPoint, List<Interval<T>> sortedByEndPoint)
-    {
+    {            
         HashMap<Interval<T>, Interval<T>> identity = new HashMap<>(sortedByStartPoint.size());
-        for (Interval<T> interval : sortedByStartPoint)
+        for (Interval<T> interval : sortedByStartPoint) {
             identity.put(interval, interval);
+        }
         return new IntervalGraphNiceDecompositionBuilder<T, Interval<T>>(
             new ArrayList<Interval<T>>(sortedByStartPoint),
             new ArrayList<Interval<T>>(sortedByEndPoint), identity, identity);
@@ -161,7 +164,7 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
     /**
      * Factory method for creating a nice tree decomposition for interval graphs. This factory
      * method needs to lists of intervals, which then is sorted by ArrayList.sort(). The complexity
-     * of this method depends on the sorting Algorithm of ArrayList (probably O(|List| log(|List|))
+     * of this method depends on the sorting Algorithm of ArrayList (O(|List| log(|List|))
      * 
      * @param intervals the (unsorted) list of all intervals
      * @param <T> the values of the intervals
@@ -179,36 +182,41 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
     }
 
     /**
-     * Main method for computing the nice tree decomposition
+     * Main method for computing the nice tree decomposition.
+     * Iterates over the starting points and ending points of the intervals from lowest to highest point.
+     * If a starting point is found, we made a forget node and if an ending point is found, we made an introduce node.
+     * By this we create the path decomposition top-down from the root to the leaf (although introduce/forget is bottom-up defined)
      */
     private void computeNiceDecomposition()
     {
 
-        // create all objects and set new root
+        // starting with the root of the tree decomposition
         currentVertex = getRoot();
-
+        
+        //current ending point to watch for
         int endIndex = 0;
 
-        // as long as intervals remain
+        // iterate over the starting points from lowest to highest
         for (Interval<T> current : startSort) {
-            // first forget until you need to introduce new nodes
+            // iterate over the ending points from lowest to highest until reaching current start point
             while (endSort.get(endIndex).getEnd().compareTo(current.getStart()) < 0) {
-                V forgetElement = intervalToVertexMap.get(endSort.get(endIndex));
-                currentVertex = addForget(forgetElement, currentVertex);
+                //add for every ending point an introduce node
+                V introducedElement = intervalToVertexMap.get(endSort.get(endIndex));
+                currentVertex = addIntroduce(introducedElement, currentVertex);
+                
+                //next ending point
                 endIndex++;
             }            
-            V introduceElement = intervalToVertexMap.get(current);
-            currentVertex = addIntroduce(introduceElement, currentVertex);
+            //add for every starting point a forget node
+            V forgottenElement = intervalToVertexMap.get(current);
+            currentVertex = addForget(forgottenElement, currentVertex);
         }
-        // add the last forget nodes
-        while (endIndex < endSort.size()) {
-            V forgetElement = intervalToVertexMap.get(endSort.get(endIndex++));
-            currentVertex = addForget(forgetElement, currentVertex);
-        }
+        // add the last introduce nodes
+        leafClosure();
     }
 
     /**
-     * getter for interval to vertex Map
+     * Returns the interval to vertex Map
      * 
      * @return a map that maps intervals to vertices
      */
@@ -218,7 +226,7 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V> e
     }
 
     /**
-     * getter for vertex to interval map
+     * Returns the vertex to interval map
      * 
      * @return a map that maps vertices to intervals
      */

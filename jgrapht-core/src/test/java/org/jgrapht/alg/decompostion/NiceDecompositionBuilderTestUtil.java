@@ -43,8 +43,8 @@ public class NiceDecompositionBuilderTestUtil
                 union.addAll(map.get(next));
                 if(union.size() == map.get(next).size() || union.size() == map.get(current).size())
                 {
-                    if(map.get(current).size() == map.get(next).size()-1) continue; //introduce
-                    else if(map.get(current).size()-1 == map.get(next).size()) continue; //forget
+                    if(map.get(current).size() == map.get(next).size()-1) continue; //introduce/forget
+                    else if(map.get(current).size()-1 == map.get(next).size()) continue; //introduce/forget
                 }
             }
             if(successor.size() == 2) //join
