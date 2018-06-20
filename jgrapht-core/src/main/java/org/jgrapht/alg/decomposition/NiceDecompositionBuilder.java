@@ -148,8 +148,8 @@ abstract public class NiceDecompositionBuilder<V>
      * 
      * @param forgottenElement the element, which gets forgotten
      * @param node the node of the tree decomposition, which becomes a forget node
-     * @return the newly created vertex, null and no change if either introducedElement is in
-     *         b({@code node}) or {@code node} is not a leaf.
+     * @return the newly created node; or null and no change if either {@code forgottenElement} is
+     *         in b({@code node}) or {@code node} is not a leaf.
      */
     protected Integer addForget(V forgottenElement, Integer node)
     {
@@ -176,8 +176,8 @@ abstract public class NiceDecompositionBuilder<V>
      * 
      * @param introducedElement the element, which is introduced
      * @param node the node, which becomes an introduce node
-     * @return the next vertex, null and no change if either introducedElement is in b({@code node})
-     *         or {@code node} is not a leaf.
+     * @return the newly created node; or null and no change if either {@code introducedElement} is
+     *         in b({@code node}) or {@code node} is not a leaf.
      */
     protected Integer addIntroduce(V introducedElement, Integer node)
     {
@@ -198,14 +198,14 @@ abstract public class NiceDecompositionBuilder<V>
 
     /**
      * Adds to all current leaves in the decomposition forget/introduce nodes until only empty sets
-     * are leaves.<br>
+     * are leaves.
      */
     protected void leafClosure()
     {
         Set<Integer> vertices = new HashSet<Integer>(decomposition.vertexSet());
-        // make leave nodes
+        // make leaf nodes
         for (Integer leaf : vertices) {
-            // leaf is not a leaf
+            // node is not a leaf
             if (Graphs.vertexHasSuccessors(decomposition, leaf))
                 continue;
 
@@ -221,7 +221,7 @@ abstract public class NiceDecompositionBuilder<V>
     /**
      * Returns the tree of the decomposition as an unmodifiable, directed graph
      * 
-     * @return the computed decomposition
+     * @return the computed tree decomposition graph
      */
     public Graph<Integer, DefaultEdge> getDecomposition()
     {
@@ -232,7 +232,7 @@ abstract public class NiceDecompositionBuilder<V>
      * Returns the map from integer nodes of the tree decomposition {@code getDecomposition()} to
      * the intervals of the interval graph as an unmodifiable map
      * 
-     * @return a nodes to interval map
+     * @return the nodes of decomposition to sets of vertices map
      */
     public Map<Integer, Set<V>> getMap()
     {
@@ -242,7 +242,7 @@ abstract public class NiceDecompositionBuilder<V>
     /**
      * Returns the root of the decomposition {@code getDecomposition()}
      * 
-     * @return a set of roots
+     * @return the root the decomposition
      */
     public Integer getRoot()
     {
