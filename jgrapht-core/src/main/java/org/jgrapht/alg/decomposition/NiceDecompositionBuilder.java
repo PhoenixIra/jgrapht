@@ -38,16 +38,17 @@ import org.jgrapht.graph.*;
  * <li>for root r &isin; V(T) and leaf l &isin; V(T): b(r)=b(t)=&empty;</li>
  * <li>every non-leaf node t &isin; V(T) is of one of the following three types:
  * <ul>
- * <li>introduce node: t has exactly one child d and b(t) = b(d) &cup; w for some w &isin; V(G)</li>
- * <li>forget node: t has exactly one child d and b(t) &cup; w = b(d) for some w &isin;
+ * <li>forget node: t has exactly one child d and b(t) = b(d) &cup; w for some w &isin; V(G)</li>
+ * <li>introduce node: t has exactly one child d and b(t) &cup; w = b(d) for some w &isin;
  * V(G)\b(t)</li>
  * <li>join node: t has exactly two child d_1, d_2 and b(t)=b(d_1)=b(d_2)</li>
  * </ul>
  * </ul>
  * <br>
  * See:<br>
+ * <href=https://www.researchgate.net/publication/220896817_Better_Algorithms_for_the_Pathwidth_and_Treewidth_of_Graphs>
  * Bodlaender, Hans &amp; Kloks, Ton. (1991). Better Algorithms for the Pathwidth and Treewidth of
- * Graphs.. 544-555. 10.1007/3-540-54233-7_162.
+ * Graphs. 544-555. 10.1007/3-540-54233-7_162.</href>
  * 
  * @author Ira Justus Fesefeldt (PhoenixIra)
  *
