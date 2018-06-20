@@ -24,7 +24,8 @@ import org.jgrapht.alg.util.*;
 import org.jgrapht.graph.*;
 
 /**
- * An abstract builder class for nice tree decompositions. <br>
+ * An abstract builder class for nice tree decompositions, which builds the tree decomposition in an
+ * top-down manner. <br>
  * A tree decomposition of a graph G is a tree T and a map b:V(T) &rarr; Set&lt;V(G)&gt;, which
  * satisfies the properties:
  * <ul>
@@ -52,7 +53,7 @@ import org.jgrapht.graph.*;
  * 
  * @author Ira Justus Fesefeldt (PhoenixIra)
  *
- * @param <V> the vertices of G
+ * @param <V> the vertices of the graph
  */
 abstract public class NiceDecompositionBuilder<V>
 {
