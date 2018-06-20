@@ -40,9 +40,9 @@ import org.jgrapht.graph.*;
  * <li>for root $r \in V(T)$ and leaf $l \in V(T): b(r)=b(t)=\emptyset$</li>
  * <li>every non-leaf node $t \in V(T)$ is of one of the following three types:
  * <ul>
- * <li>forget node: $t$ has exactly one child $d$ and $b(t) = b(d) \cup w$ for some $w \in
+ * <li>forget node: $t$ has exactly one child $d$ and $b(t) = b(d) \cup \{ w\}$ for some $w \in
  * V(G)\setminus b(d)$</li>
- * <li>introduce node: $t$ has exactly one child $d$ and $b(t) \cup w = b(d)$ for some $w \in
+ * <li>introduce node: $t$ has exactly one child $d$ and $b(t) \cup \{ w\} = b(d)$ for some $w \in
  * V(G)\setminus b(t)$</li>
  * <li>join node: $t$ has exactly two children $d_1$, $d_2$ and $b(t)=b(d_1)=b(d_2)$</li>
  * </ul>
@@ -148,8 +148,8 @@ abstract public class NiceDecompositionBuilder<V>
      * 
      * @param forgottenElement the element, which gets forgotten
      * @param node the node of the tree decomposition, which becomes a forget node
-     * @return the newly created vertex, null and no change if either introducedElement is in the
-     *         bag of currentVertex or currentVertex is not a leaf.
+     * @return the newly created vertex, null and no change if either introducedElement is in
+     *         b({@code node}) or {@code node} is not a leaf.
      */
     protected Integer addForget(V forgottenElement, Integer node)
     {
@@ -176,8 +176,8 @@ abstract public class NiceDecompositionBuilder<V>
      * 
      * @param introducedElement the element, which is introduced
      * @param node the node, which becomes an introduce node
-     * @return the next vertex, null and no change if either introducedElement is in the bag of
-     *         currentVertex or currentVertex is not a leaf.
+     * @return the next vertex, null and no change if either introducedElement is in b({@code node})
+     *         or {@code node} is not a leaf.
      */
     protected Integer addIntroduce(V introducedElement, Integer node)
     {
