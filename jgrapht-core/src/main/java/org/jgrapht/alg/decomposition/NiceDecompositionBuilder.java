@@ -90,7 +90,7 @@ abstract public class NiceDecompositionBuilder<V>
     }
 
     /**
-     * Getter for the next free Integer Supplies the add vertex methods with new vertices
+     * Getter for the next free Integer. Supplies the add vertex methods with new vertices
      * 
      * @return unused integer
      */
