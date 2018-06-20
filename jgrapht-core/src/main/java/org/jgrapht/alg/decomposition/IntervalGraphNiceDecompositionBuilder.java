@@ -29,12 +29,20 @@ import org.jgrapht.intervalgraph.interval.*;
  * ending interval, a forget node is added. The resulting decomposition has exactly one introduce
  * node and one forget node for every vertex and zero join node (thus it is a path decomposition).
  * The complexity of this class depends on the input.
+ * <p>
+ * For more information about interval graphs see {@link IntervalGraphRecognizer} and for more
+ * information about nice tree decompositions see {@link NiceDecompositionBuilder}.
+ * <p>
+ * The time complexity of this algorithm is bounded by the number of generates nodes. We have one
+ * root node, exactly one introduce node for every vertex and one forget node for every vertex. We
+ * do not have any join nodes, thus we have in total exactly $2|V|+1$ nodes, which sets are bounded
+ * by the set of the nearest ancestor forget node n with $N(n)$ vertices. Thus the time complexity
+ * of this algorithm is in $\mathcal{O}(|V|+|E|)$.
  *
  * @param <T> the value type of the intervals of the interval graph
  * @param <V> the type of the nodes of the input graph
  *
  * @author Ira Justus Fesefeldt (PhoenixIra)
- * @since Mai 14, 2018
  */
 public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V>
     extends
@@ -71,7 +79,8 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V>
     /**
      * Factory method for creating a nice tree decomposition for interval graphs. This factory
      * method uses general graphs and the IntervalGraphRecognizer to generate a list of intervals
-     * sorted by starting and ending points. The complexity of this method is in O(|V|+|E|).
+     * sorted by starting and ending points. The complexity of this method is in
+     * $\mathcal{O}(|V|+|E|)$.
      * 
      * @param graph the graph which should transformed to an interval graph and then into a
      *        corresponding nice tree decomposition
@@ -106,8 +115,8 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V>
     /**
      * Factory method for creating a nice tree decomposition for interval graphs. This factory
      * method extracts the intervals from the interval graph and uses them as an input for the
-     * computation. The complexity of this method depends on the sorting algorithm of ArrayList
-     * (O(|V| log(|V|))
+     * computation. The complexity of this method depends on the sorting algorithm of ArrayList:
+     * $\mathcal{O}(|V| log(|V|)$.
      * 
      * @param intervalGraph the input for which a nice tree decomposition should be computed
      * @param <V> the IntervalVertex Type of the interval graph
@@ -146,7 +155,7 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V>
      * method needs to lists of intervals, the first sorted after starting points, the second after
      * ending points. This method does not check if the two lists are sorted or if they have the
      * same intervals. If these conditions does not apply, this algorithm behaves arbitrary. The
-     * complexity of this method is in O(|Intervals|).
+     * complexity of this method is in $\mathcal{O}(|Intervals|)$.
      * 
      * @param sortedByStartPoint a list of all intervals sorted by the starting point
      * @param sortedByEndPoint a list of all intervals sorted by the ending point
@@ -170,7 +179,8 @@ public class IntervalGraphNiceDecompositionBuilder<T extends Comparable<T>, V>
     /**
      * Factory method for creating a nice tree decomposition for interval graphs. This factory
      * method needs to lists of intervals, which then is sorted by ArrayList.sort(). The complexity
-     * of this method depends on the sorting Algorithm of ArrayList (O(|List| log(|List|))
+     * of this method depends on the sorting Algorithm of ArrayList: $\mathcal{O}(|List|
+     * log(|List|))$
      * 
      * @param intervals the (unsorted) list of all intervals
      * @param <T> the values of the intervals

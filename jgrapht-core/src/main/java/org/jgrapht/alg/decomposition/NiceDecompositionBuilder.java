@@ -1,5 +1,5 @@
 /*
- * (C) Copyright 2016-2018, by Ira Justus Fesefeldt and Contributors.
+ * (C) Copyright 2018-2018, by Ira Justus Fesefeldt and Contributors.
  *
  * JGraphT : a free Java graph-theory library
  *
@@ -25,31 +25,32 @@ import org.jgrapht.graph.*;
 
 /**
  * An abstract builder class for nice tree decompositions, which builds the tree decomposition in a
- * top-down manner. <br>
- * A tree decomposition of a graph G is a tree T and a map b:V(T) &rarr; Set&lt;V(G)&gt;, which
- * satisfies the properties:
+ * top-down manner.
+ * <p>
+ * A tree decomposition of a graph $G$ is a tree $T$ and a map $b:V(T) \rightarrow Set&lt;V(G)&gt;$,
+ * which satisfies the properties:
  * <ul>
- * <li>for every edge e in E(G), there is a node t in V(T) with e is a subset of b(v)</li>
- * <li>for all vertices v in V(G) the set {t &isin; V(T) | v &isin; b(t)} is non-empty and connected
- * in T</li>
+ * <li>for every edge $e \in E(G)$, there is a node $t \in V(T)$ with $e \subseteq b(v)$</li>
+ * <li>for all vertices $v \in V(G)$ the set $\{t \in V(T) | v \in b(t)\}$ is non-empty and
+ * connected in $T$</li>
  * </ul>
  * <br>
  * A nice tree decomposition is a special tree decomposition, which satisfies the properties:
  * <ul>
- * <li>for root r &isin; V(T) and leaf l &isin; V(T): b(r)=b(t)=&empty;</li>
- * <li>every non-leaf node t &isin; V(T) is of one of the following three types:
+ * <li>for root $r \in V(T)$ and leaf $l \in V(T): b(r)=b(t)=\emptyset$</li>
+ * <li>every non-leaf node $t \in V(T)$ is of one of the following three types:
  * <ul>
- * <li>forget node: t has exactly one child d and b(t) = b(d) &cup; w for some w &isin; V(G)</li>
- * <li>introduce node: t has exactly one child d and b(t) &cup; w = b(d) for some w &isin;
- * V(G)\b(t)</li>
- * <li>join node: t has exactly two child d_1, d_2 and b(t)=b(d_1)=b(d_2)</li>
+ * <li>forget node: $t$ has exactly one child $d$ and $b(t) = b(d) \cup w$ for some $w \in
+ * V(G)\setminus b(d)$</li>
+ * <li>introduce node: $t$ has exactly one child $d$ and $b(t) \cup w = b(d)$ for some $w \in
+ * V(G)\setminus b(t)$</li>
+ * <li>join node: $t$ has exactly two children $d_1$, $d_2$ and $b(t)=b(d_1)=b(d_2)$</li>
  * </ul>
  * </ul>
- * <br>
+ * <p>
  * See:<br>
- * <href=https://www.researchgate.net/publication/220896817_Better_Algorithms_for_the_Pathwidth_and_Treewidth_of_Graphs>
  * Bodlaender, Hans &amp; Kloks, Ton. (1991). Better Algorithms for the Pathwidth and Treewidth of
- * Graphs. 544-555. 10.1007/3-540-54233-7_162.</href>
+ * Graphs. 544-555. 10.1007/3-540-54233-7_162.
  * 
  * @author Ira Justus Fesefeldt (PhoenixIra)
  *
@@ -100,92 +101,96 @@ abstract public class NiceDecompositionBuilder<V>
 
     /**
      * Method for adding a new join node.<br>
-     * {@code toJoin} J0 is copied two times J1 and J2. J0 afterwards becomes the root of the
-     * subtree. J1 becomes the successor of J0 and has the successors of J0 as successor. J2 becomes
-     * a leaf and the successor of J0. This can be used to make a join node retrospectively to
-     * branch of this node. J1 continues the path while J2 adds another path.
+     * {@code node} is copied two times j1 and j2. {@code node} afterwards becomes the root of the
+     * subtree. j2 becomes the child of {@code node} and has the children of {@code node} as
+     * children. j1 becomes a leaf and the child of {@code node}. This can be used to make a join
+     * node retrospectively to branch of this node. j2 continues the path while j1 adds another
+     * path.<br>
+     * The time complexity of this method is in $\mathcal{O}(|b(node)|)$.
      * 
-     * @param currentVertex which nodes should get a join node
+     * @param node which nodes should become a join node
      * @return the new children of the join node, first element has no children, second element has
      *         the children of toJoin
      */
-    protected Pair<Integer, Integer> addJoin(Integer currentVertex)
+    protected Pair<Integer, Integer> addJoin(Integer node)
     {
         Set<V> currentVertexBag = null;
 
         // new
         Integer vertexChildLeft = getNextInteger();
         decomposition.addVertex(vertexChildLeft);
-        currentVertexBag = new HashSet<V>(decompositionMap.get(currentVertex));
+        currentVertexBag = new HashSet<V>(decompositionMap.get(node));
         decompositionMap.put(vertexChildLeft, currentVertexBag);
 
         // new current root
         Integer vertexChildRight = getNextInteger();
         decomposition.addVertex(vertexChildRight);
-        currentVertexBag = new HashSet<V>(decompositionMap.get(currentVertex));
+        currentVertexBag = new HashSet<V>(decompositionMap.get(node));
         decompositionMap.put(vertexChildRight, currentVertexBag);
 
         // redirect all edges to new parent (should be just one!)
-        for (Integer successor : Graphs.successorListOf(decomposition, currentVertex)) {
-            decomposition.removeEdge(currentVertex, successor);
+        for (Integer successor : Graphs.successorListOf(decomposition, node)) {
+            decomposition.removeEdge(node, successor);
             decomposition.addEdge(vertexChildRight, successor);
         }
         // make children of parent vertex
-        decomposition.addEdge(currentVertex, vertexChildLeft);
-        decomposition.addEdge(currentVertex, vertexChildRight);
+        decomposition.addEdge(node, vertexChildLeft);
+        decomposition.addEdge(node, vertexChildRight);
 
         return new Pair<Integer, Integer>(vertexChildLeft, vertexChildRight);
     }
 
     /**
-     * Method for adding forget nodes. It is only usable if {@code currentVertex} cV is a leaf. It
-     * then adds the new forget node I as the child of {@code currentVertex} with the set of
-     * {@code currentVertex} plus {@code forgottenElement}.
+     * Method for adding forget nodes. It is only usable if {@code node} is a leaf. It then adds the
+     * new node as the child of {@code node} with the set of {@code node} plus
+     * {@code forgottenElement}.<br>
+     * The time complexity of this method is in $\mathcal{O}(|b(node)|)$.
      * 
      * @param forgottenElement the element, which gets forgotten
-     * @param currentVertex the vertex this element gets forgotten to
+     * @param node the node of the tree decomposition, which becomes a forget node
      * @return the newly created vertex, null and no change if either introducedElement is in the
      *         bag of currentVertex or currentVertex is not a leaf.
      */
-    protected Integer addForget(V forgottenElement, Integer currentVertex)
+    protected Integer addForget(V forgottenElement, Integer node)
     {
-        if (!Graphs.successorListOf(decomposition, currentVertex).isEmpty())
+        if (!Graphs.successorListOf(decomposition, node).isEmpty())
             return null;
-        if (decompositionMap.get(currentVertex).contains(forgottenElement))
+        if (decompositionMap.get(node).contains(forgottenElement))
             return null;
 
-        Set<V> nextVertexBag = new HashSet<>(decompositionMap.get(currentVertex));
+        Set<V> nextVertexBag = new HashSet<>(decompositionMap.get(node));
         nextVertexBag.add(forgottenElement);
         Integer nextVertex = getNextInteger();
         decomposition.addVertex(nextVertex);
-        decomposition.addEdge(currentVertex, nextVertex);
+        decomposition.addEdge(node, nextVertex);
         decompositionMap.put(nextVertex, nextVertexBag);
 
         return nextVertex;
     }
 
     /**
-     * Method for adding introduce nodes. It is only usable if {@code currentVertex} cV is a leaf.
-     * It then adds the new introduce node F as the child of {@code currentVertex} with the set of
-     * {@code currentVertex} minus {@code introducedElement}.
+     * Method for adding introduce nodes. It is only usable if {@code node} is a leaf. It then adds
+     * the new node as the child of {@code node} with the set of {@code node} minus
+     * {@code introducedElement}.<br>
+     * The time complexity of this method is in $\mathcal{O}(|b(node)|)$.
      * 
      * @param introducedElement the element, which is introduced
-     * @param currentVertex the vertex this element is introduced
+     * @param node the node, which becomes an introduce node
      * @return the next vertex, null and no change if either introducedElement is in the bag of
      *         currentVertex or currentVertex is not a leaf.
      */
-    protected Integer addIntroduce(V introducedElement, Integer currentVertex)
+    protected Integer addIntroduce(V introducedElement, Integer node)
     {
-        if (!Graphs.successorListOf(decomposition, currentVertex).isEmpty())
+        if (!Graphs.successorListOf(decomposition, node).isEmpty())
             return null;
-        if (!decompositionMap.get(currentVertex).contains(introducedElement))
+        if (!decompositionMap.get(node).contains(introducedElement))
             return null;
 
-        Set<V> nextVertexBag = new HashSet<>(decompositionMap.get(currentVertex));
+        Set<V> nextVertexBag = new HashSet<>(decompositionMap.get(node));
         nextVertexBag.remove(introducedElement);
         Integer nextVertex = getNextInteger();
         decomposition.addVertex(nextVertex);
-        decomposition.addEdge(currentVertex, nextVertex);
+        decomposition.addEdge(node, nextVertex);
         decompositionMap.put(nextVertex, nextVertexBag);
 
         return nextVertex;
@@ -193,7 +198,7 @@ abstract public class NiceDecompositionBuilder<V>
 
     /**
      * Adds to all current leaves in the decomposition forget/introduce nodes until only empty sets
-     * are leaves.
+     * are leaves.<br>
      */
     protected void leafClosure()
     {
