@@ -30,9 +30,9 @@ public class KorteMoehringIntervalGraphRecognizer<V, E> implements IntervalGraph
     
     ChordalityInspector<V, E> chorInspec;
 
-    private MPQNode treeRoot;
+    private PNode treeRoot;
     
-    private HashMap<V,Set<MPQNodeSetElement>> vertexToListPositionMap;
+    private HashMap<V,Set<MPQNode>> vertexToMPQNode;
     
     private boolean isIntervalGraph;
     private boolean isChordal;
@@ -44,8 +44,9 @@ public class KorteMoehringIntervalGraphRecognizer<V, E> implements IntervalGraph
     public KorteMoehringIntervalGraphRecognizer(Graph<V, E> graph)
     {
         this.graph = graph;
-        chorInspec = new ChordalityInspector<>(graph);
+        chorInspec = new ChordalityInspector<>(graph,ChordalityInspector.IterationOrder.LEX_BFS);
         treeRoot = new PNode(null,null);
+        vertexToMPQNode = new HashMap<V, Set<MPQNode>>();
     }
 
     /**
@@ -106,10 +107,7 @@ public class KorteMoehringIntervalGraphRecognizer<V, E> implements IntervalGraph
             MPQNode Nbig = getNBig(path, positiveLabels);
             
             //update MPQ Tree
-            if(Nsmall.equals(Nbig))
-                addVertexToLeaf(u,path);
-            else
-                changedPathToTemplates(u,path,Nsmall,Nbig);
+            changedPathToTemplates(u,predecessors,path,Nsmall,Nbig);
 
         }
     }
@@ -170,10 +168,10 @@ public class KorteMoehringIntervalGraphRecognizer<V, E> implements IntervalGraph
      */
     private void addEmptyPredecessors(V u)
     {
-        MPQNodeSetElement bag = new MPQNodeSetElement(u);
+        Set<V> bag = new HashSet<V>();
+        bag.add(u);
         MPQNode leaf = new PNode(null,bag);
         treeRoot.add(leaf);
-        leaf.parent = treeRoot;
             
     }
     
@@ -272,17 +270,241 @@ public class KorteMoehringIntervalGraphRecognizer<V, E> implements IntervalGraph
     }
 
     /**
-     * TODO: better Javadoc
-     * Checks the path for specifig patterns and changes every node accordingly
+     * Checks the path for specifig patterns and changes every node accordingly.
+     * We distinguish between the two cases:
+     * - nSmall == nBig: then we just need to change one node in the tree and do this in the method
+     *      templateForSmallEqBig. In this case a maximal clique can just be extended or split
+     * - nSmall != nBig: now we have to generate some sort of ordering over the maximal cliques.
+     *      The mpq tree is for the first element nSmall with as a special case changed in the
+     *      templateForSmall method and afterwards the other nodes in the path until reaching
+     *      the parent of nBig is changed with P3 or Q3 templates.
      * 
      * @param u the vertex to add to the tree
      * @param path the path of vertices to be changed
      * @param nSmall the smalles positive node in path
-     * @param nBig the highest non-empty, non-inf node in path
+     * @param nBig the highest non-empty, non-inf node in path (else equal to nSmall)
      */
-    private void changedPathToTemplates(V u, List<MPQNode> path, MPQNode nSmall, MPQNode nBig)
+    private void changedPathToTemplates(V u, Set<V> adj, List<MPQNode> path, MPQNode nSmall, MPQNode nBig)
     {
-        // TODO Auto-generated method stub
+        //search for position of nSmall in path
+        int pos = 0;
+        while(path.get(pos) != nSmall) {
+            pos++;
+        }
+        
+        //init
+        MPQNode current = path.get(pos);
+        Set<V> adjOfNode = new HashSet<V>(adj);
+        adjOfNode.retainAll(current.getBag());
+        
+        //special case that nSmall == nBig
+        if(nSmall == nBig) {
+            templateForSmallEqBig(current, u, adjOfNode, path, pos);
+            return; //no further iteration needed!
+        }
+        
+        
+        
+        
+        
+        //do for nSmall != nBig
+        templateForSmall(current,u,adjOfNode,path,pos);
+        pos++;
+        
+        //and for the rest of the list
+        while(path.get(pos-1) != nBig) {
+            //is a P-Node, can not be a leaf
+            if(current.getType() == NodeType.PNODE) {
+                PNode pCurrent = current.asPNode();
+                templateP3(pCurrent, u, adjOfNode);
+                
+            //is a Q-Node, now check whether the left or right outer section has to be changed
+            } else if(current.getType() == NodeType.QSECTION) {
+                QSectionNode qSecCurrent = current.asSection();
+                pos++;
+                current = path.get(pos);
+                QNode qCurrent = current.asQNode();
+                
+                
+                if(qCurrent.getLeftestSection() == qSecCurrent) {
+                    templateQ3Left(qCurrent, u, adjOfNode);
+                } else if(qCurrent.getRightestSection() == qSecCurrent) {
+                    templateQ3Right(qCurrent, u, adjOfNode);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Handles the special case for nSmall == nBig. We distinguish between the case that nSmall is a PNode or a QNode.
+     * - PNode: No we need to check the condition for L1 and for P1
+     * - QNode: check whether we need to change the left or the righter outer section. In both cases we also need to
+     *          check for the Q1/Q2 condition.
+     *          
+     *  After all checks are completed, we choose the correct template for this node.
+     * 
+     * 
+     * @param current the node to be changed according to a template
+     * @param u the vertex which needs to be added
+     * @param adjOfNode the adjacent vertices in the bag of current
+     * @param path the path which needs to be changed
+     * @param pos the position of current in path
+     */
+    private void templateForSmallEqBig(MPQNode current, V u, Set<V> adjOfNode, List<MPQNode> path, int pos) {
+        //templates for PNodes
+        if (current.getType() == NodeType.PNODE) {
+            PNode pCurrent = current.asPNode();
+
+            // for leaves
+            if (pCurrent.isLeaf()) {
+                templateL1(pCurrent, u, adjOfNode);
+
+                // for 'real' PNodes
+            } else {
+                templateP1(pCurrent, u, adjOfNode);
+            }
+
+            // templates for QNodes
+        } else if (current.getType() == NodeType.QNODE) {
+            QNode qCurrent = current.asQNode();
+            MPQNode pathSection = path.get(pos - 1);
+
+            // differentiate between left outer section and right outer section
+            // left outer section
+            if (qCurrent.getLeftestSection() == pathSection) {
+
+                // check A subset V_m condition
+                if (qCurrent.getRightestSection().getBag().containsAll(adjOfNode)) {
+                    templateQ1LeftNBig(qCurrent, u, adjOfNode);
+                } else {
+                    templateQ2LeftNBig(qCurrent, u, adjOfNode);
+                }
+
+                // right outer section
+            } else if (qCurrent.getRightestSection() == pathSection) {
+
+                // check A subset V_m condition
+                if (qCurrent.getRightestSection().getBag().containsAll(adjOfNode)) {
+                    templateQ1RightNBig(qCurrent, u, adjOfNode);
+                } else {
+                    templateQ2RightNBig(qCurrent, u, adjOfNode);
+                }
+            }
+        }
+    }
+    
+    /**
+     * Handles the special case for current == nSmall != nBig. We distinguish between the case that nSmall is a PNode or a QNode.
+     * - PNode: No we need to check the condition for L2 and for P2
+     * - QNode: check whether we need to change the left or the righter outer section. In both cases we also need to
+     *          check for the Q1/Q2 condition.
+     *          
+     *  After all checks are completed, we choose the correct template for this node.
+     * 
+     * @param current the node to be changed according to a template
+     * @param u the vertex which needs to be added
+     * @param adjOfNode the adjacent vertices in the bag of current
+     * @param path the path which needs to be changed
+     * @param pos the position of current in path
+     */
+    private void templateForSmall(MPQNode current, V u, Set<V> adjOfNode, List<MPQNode> path, int pos) {
+        //templates for PNodes
+        if(current.getType() == NodeType.PNODE) {
+            PNode pCurrent = current.asPNode();
+            
+            //template for leaves
+            if(pCurrent.isLeaf()) {
+                templateL2(pCurrent, u, adjOfNode);
+                
+            //template for 'real' PNodes
+            } else {
+                templateP2(pCurrent, u, adjOfNode);
+            }
+        } else if(current.getType() == NodeType.QNODE) {
+            QNode qCurrent = current.asQNode();
+            MPQNode pathSection = path.get(pos - 1);
+
+            // differentiate between left outer section and right outer section
+            // left outer section
+            if (qCurrent.getLeftestSection() == pathSection) {
+
+                // check A subset V_m condition
+                if (qCurrent.getRightestSection().getBag().containsAll(adjOfNode)) {
+                    templateQ1LeftNSmall(qCurrent, u, adjOfNode);
+                } else {
+                    templateQ2LeftNSmall(qCurrent, u, adjOfNode);
+                }
+
+                // right outer section
+            } else if (qCurrent.getRightestSection() == pathSection) {
+
+                // check A subset V_m condition
+                if (qCurrent.getRightestSection().getBag().containsAll(adjOfNode)) {
+                    templateQ1RightNSmall(qCurrent, u, adjOfNode);
+                } else {
+                    templateQ2RightNSmall(qCurrent, u, adjOfNode);
+                }
+            }
+        }
+    }
+    
+    private void templateL1(PNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateL2(PNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateP1(PNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateP2(PNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateP3(PNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateQ1LeftNBig(QNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateQ2LeftNBig(QNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateQ1RightNBig(QNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateQ2RightNBig(QNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateQ1LeftNSmall(QNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateQ2LeftNSmall(QNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateQ1RightNSmall(QNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateQ2RightNSmall(QNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateQ3Left(QNode current, V u, Set<V> adj) {
+        
+    }
+    
+    private void templateQ3Right(QNode current, V u, Set<V> adj) {
         
     }
 
@@ -345,31 +567,59 @@ public class KorteMoehringIntervalGraphRecognizer<V, E> implements IntervalGraph
     
     
     
+    /**
+     * To handel object casting elegant, we use an enum to detect the subclass of a MPQNode.
+     * Possible objects in this enum are PNodes, QNodes and QSections
+     * @author phoenix
+     *
+     */
+    private enum NodeType {PNODE, QNODE, QSECTION};
     
-    
-    
-    
+    /**
+     * An abstract class for all MPQNodes, which give the basic pointers and elements of a MPQNode
+     * @author phoenix
+     *
+     */
     private abstract class MPQNode
     {
         MPQNode left;
         MPQNode right;
         MPQNode parent;
         
-        MPQNodeSetElement bag;
+        NodeType type;
         
-        MPQNode(MPQNodeSetElement bag) {
+        Set<V> bag;
+        
+        MPQNode(Set<V> bag) {
             this.bag = bag;
         }
         
-        abstract void add(MPQNode newChild);
+        MPQNode getParent() {
+            return parent;
+        }
+        
+        Set<V> getBag() {
+            return bag;
+        }
+
+        NodeType getType() {
+            return type;
+        }
+        
+        abstract boolean isLeaf();
+        abstract PNode asPNode();
+        abstract QNode asQNode();
+        abstract QSectionNode asSection();
+        
     }
     
     private class PNode extends MPQNode
     {
         MPQNode children;
         
-        PNode(MPQNode child, MPQNodeSetElement bag) {
+        PNode(MPQNode child, Set<V> bag) {
             super(bag);
+            super.type = NodeType.PNODE;
             this.children = child;
         }
         
@@ -387,6 +637,22 @@ public class KorteMoehringIntervalGraphRecognizer<V, E> implements IntervalGraph
                 this.children.left = child;
             }
         }
+        
+        boolean isLeaf() {
+            return children == null;
+        }
+        
+
+        PNode asPNode() {
+            return this;
+        }
+        QNode asQNode() {
+            return null;
+        }
+        QSectionNode asSection() {
+            return null;
+        }
+        
     }
     
     private class QNode extends MPQNode
@@ -394,41 +660,58 @@ public class KorteMoehringIntervalGraphRecognizer<V, E> implements IntervalGraph
         MPQNode leftestSection;
         MPQNode rightestSection;
         
-        QNode(MPQNode section, MPQNodeSetElement bag) {
+        QNode(MPQNode section, Set<V> bag) {
             super(bag);
+            super.type = NodeType.QNODE;
             this.leftestSection = section;
             this.rightestSection = section;
         }
         
-        void add(MPQNode child) {
-            //TODO
+        MPQNode getLeftestSection() {
+            return leftestSection;
         }
         
+        MPQNode getRightestSection() {
+            return rightestSection;
+        }
+        
+        boolean isLeaf() {
+            return false;
+        }
+        
+        PNode asPNode() {
+            return null;
+        }
+        QNode asQNode() {
+            return this;
+        }
+        QSectionNode asSection() {
+            return null;
+        }
     }
     
     private class QSectionNode extends MPQNode
     {
         MPQNode child;
         
-        QSectionNode(MPQNode child, MPQNodeSetElement bag) {
+        QSectionNode(MPQNode child, Set<V> bag) {
             super(bag);
+            super.type = NodeType.QSECTION;
             
         }
         
-        void add(MPQNode child) {
-            throw new UnsupportedOperationException();
+        boolean isLeaf() {
+            return false;
         }
-    }
-    
-    private class MPQNodeSetElement
-    {
-        V vertex;
-        MPQNodeSetElement left;
-        MPQNodeSetElement right;
-        MPQNode owner;
         
-        MPQNodeSetElement(V vertex) {
-            this.vertex = vertex;
+        PNode asPNode() {
+            return null;
+        }
+        QNode asQNode() {
+            return null;
+        }
+        QSectionNode asSection() {
+            return this;
         }
     }
 }
