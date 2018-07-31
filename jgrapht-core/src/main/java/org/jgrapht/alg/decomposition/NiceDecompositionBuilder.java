@@ -27,17 +27,18 @@ import org.jgrapht.graph.*;
  * An abstract builder class for nice tree decompositions, which builds the tree decomposition in a
  * top-down manner.
  * <p>
- * A tree decomposition of a graph $G$ is a tree $T$ and a map $b:V(T) \rightarrow Set&lt;V(G)&gt;$,
- * which satisfies the properties:
+* A tree-decomposition of a graph $G = (V, E)$ is a pair $(X, T) = (\{X_i\ |\ i\in I\}, (I, F))$ where
+ * $X = \{X_i\ |\ i \in I \}$ is a family of subsets of $V$, and $T = (I, F)$ is a tree, such that
  * <ul>
- * <li>for every edge $e \in E(G)$, there is a node $t \in V(T)$ with $e \subseteq b(v)$</li>
- * <li>for all vertices $v \in V(G)$ the set $\{t \in V(T) | v \in b(t)\}$ is non-empty and
- * connected in $T$</li>
+ * <li>Union of the sets $X_i$ equals to $V$</li>
+ * <li>for every edge $e = (u,v)$ there exists a set $X_i$ such that $u \in X_i$ and $v \in X_i$</li>
+ * <li>if both $X_i$ and $X_j$ contain a vertex $v$ then every set $X_k$ on the simple path from $X_i$ to $X_j$
+ * contains vertex $v$.</li>
  * </ul>
  * <br>
  * A nice tree decomposition is a special tree decomposition, which satisfies the properties:
  * <ul>
- * <li>for root $r \in V(T)$ and leaf $l \in V(T): b(r)=b(t)=\emptyset$</li>
+ * <li>for root $r \in V(T)$ and leaf $l \in V(T): |b(r)|=|b(t)|=1$</li>
  * <li>every non-leaf node $t \in V(T)$ is of one of the following three types:
  * <ul>
  * <li>forget node: $t$ has exactly one child $d$ and $b(t) \cup \{ w\} = b(d)$ for some $w \in
@@ -50,7 +51,8 @@ import org.jgrapht.graph.*;
  * <p>
  * See:<br>
  * Bodlaender, Hans &amp; Kloks, Ton. (1991). Better Algorithms for the Pathwidth and Treewidth of
- * Graphs. 544-555. 10.1007/3-540-54233-7_162.
+ * Graphs. 544-555. 10.1007/3-540-54233-7_162.<br>
+ * for a more complete description of tree decomposition and nice tree decomposition.
  * 
  * @author Ira Justus Fesefeldt (PhoenixIra)
  *
@@ -66,10 +68,10 @@ abstract public class NiceDecompositionBuilder<V>
     protected Map<Integer, Set<V>> decompositionMap;
 
     // the root of the tree
-    protected Integer root;
+    protected int root;
 
     // next integer for vertex generation
-    private Integer nextInteger;
+    private int nextInteger;
 
     /**
      * Constructor for all methods used in the abstract method. This constructor instantiates the
@@ -79,24 +81,41 @@ abstract public class NiceDecompositionBuilder<V>
     protected NiceDecompositionBuilder()
     {
         // creating objects
-        decomposition = new DefaultDirectedGraph<Integer, DefaultEdge>(DefaultEdge.class);
-        decompositionMap = new HashMap<Integer, Set<V>>();
-
-        // create root
-        root = 0;
-        nextInteger = 1;
-        decompositionMap.put(root, new HashSet<V>());
-        decomposition.addVertex(root);
+        decomposition = new DefaultDirectedGraph<>(DefaultEdge.class);
+        decompositionMap = new HashMap<>();
+        nextInteger = 0;
     }
 
     /**
-     * Getter for the next free Integer. Supplies the add vertex methods with new vertices
+     * Getter for the next integer, which is not yet used as a node in the decomposition. 
+     * Supplies the add vertex methods with new vertices.
      * 
-     * @return unused integer
+     * @return unused integer node for the decomposition
      */
-    private Integer getNextInteger()
+    private int getNextInteger()
     {
         return nextInteger++;
+    }
+    
+    /**
+     * Method for adding a root node. This method should be called at the start of every computation.
+     * It creates a single node with the bag containing {@code rootElement}.
+     * 
+     * @throws UnsupportedOperationException when calling this method twice
+     * @param rootElement the content of the bag of the root
+     * @return the root node
+     */
+    protected Integer addRootNode(V rootElement)
+    {
+        if(!decomposition.vertexSet().isEmpty())
+            throw new UnsupportedOperationException("A root can not be created twice");
+        
+        root = getNextInteger();
+        Set<V> bag = new HashSet<>();
+        bag.add(rootElement);
+        decompositionMap.put(root, bag);
+        decomposition.addVertex(root);
+        return root;
     }
 
     /**
@@ -112,24 +131,24 @@ abstract public class NiceDecompositionBuilder<V>
      * @return the new children of the join node; first/left element has no children, second/right
      *         element has the children of {@code node}
      */
-    protected Pair<Integer, Integer> addJoin(Integer node)
+    protected Pair<Integer, Integer> addJoinNode(Integer node)
     {
         Set<V> currentVertexBag = null;
 
         // create first/left new child of node
-        Integer vertexChildLeft = getNextInteger();
+        int vertexChildLeft = getNextInteger();
         decomposition.addVertex(vertexChildLeft);
         currentVertexBag = new HashSet<V>(decompositionMap.get(node));
         decompositionMap.put(vertexChildLeft, currentVertexBag);
 
         // create second/right new child of node
-        Integer vertexChildRight = getNextInteger();
+        int vertexChildRight = getNextInteger();
         decomposition.addVertex(vertexChildRight);
         currentVertexBag = new HashSet<V>(decompositionMap.get(node));
         decompositionMap.put(vertexChildRight, currentVertexBag);
 
         // redirect all edges to new parent, the second/right element
-        for (Integer successor : Graphs.successorListOf(decomposition, node)) {
+        for (int successor : Graphs.successorListOf(decomposition, node)) {
             decomposition.removeEdge(node, successor);
             decomposition.addEdge(vertexChildRight, successor);
         }
@@ -137,7 +156,7 @@ abstract public class NiceDecompositionBuilder<V>
         decomposition.addEdge(node, vertexChildLeft);
         decomposition.addEdge(node, vertexChildRight);
 
-        return new Pair<Integer, Integer>(vertexChildLeft, vertexChildRight);
+        return new Pair<>(vertexChildLeft, vertexChildRight);
     }
 
     /**
@@ -146,23 +165,25 @@ abstract public class NiceDecompositionBuilder<V>
      * {@code forgottenElement}.<br>
      * The time complexity of this method is in $\mathcal{O}(|b(node)|)$.
      * 
+     * @throws IllegalArgumentException if either {@code forgottenElement} is in b({@code node}) 
+     * or {@code node} is not a leaf.
      * @param forgottenElement the element, which gets forgotten
      * @param node the node of the tree decomposition, which becomes a forget node
-     * @return the newly created node; or null and no change if either {@code forgottenElement} is
-     *         in b({@code node}) or {@code node} is not a leaf.
+     * @return the newly created node
      */
-    protected Integer addForget(V forgottenElement, Integer node)
+    protected int addForgetNode(V forgottenElement, int node)
     {
         //check precondition
         if (!Graphs.successorListOf(decomposition, node).isEmpty())
-            return null;
+            throw new IllegalArgumentException("Node "+node+" of decomposition is not a leaf.");
         if (decompositionMap.get(node).contains(forgottenElement))
-            return null;
+            throw new IllegalArgumentException("Node "+node+" of decomposition does already contain "
+                                                      +forgottenElement+", thus can not be forgotten.");
 
         //add new child
         Set<V> nextVertexBag = new HashSet<>(decompositionMap.get(node));
         nextVertexBag.add(forgottenElement);
-        Integer nextVertex = getNextInteger();
+        int nextVertex = getNextInteger();
         decomposition.addVertex(nextVertex);
         decomposition.addEdge(node, nextVertex);
         decompositionMap.put(nextVertex, nextVertexBag);
@@ -177,23 +198,25 @@ abstract public class NiceDecompositionBuilder<V>
      * {@code introducedElement}.<br>
      * The time complexity of this method is in $\mathcal{O}(|b(node)|)$.
      * 
+     * @throws IllegalArgumentException if either {@code introducedElement} is not in b({@code node}) 
+     * or {@code node} is not a leaf.
      * @param introducedElement the element, which is introduced
      * @param node the node, which becomes an introduce node
-     * @return the newly created node; or null and no change if either {@code introducedElement} is
-     *         in b({@code node}) or {@code node} is not a leaf.
+     * @return the newly created node
      */
-    protected Integer addIntroduce(V introducedElement, Integer node)
+    protected int addIntroduceNode(V introducedElement, int node)
     {
         //check precondition
         if (!Graphs.successorListOf(decomposition, node).isEmpty())
-            return null;
+            throw new IllegalArgumentException("Node "+node+" of decomposition is not a leaf.");
         if (!decompositionMap.get(node).contains(introducedElement))
-            return null;
+            throw new IllegalArgumentException("Node "+node+" of decomposition does not contain "
+                                                      +introducedElement+", thus can not be introduced.");
 
         //add new child
         Set<V> nextVertexBag = new HashSet<>(decompositionMap.get(node));
         nextVertexBag.remove(introducedElement);
-        Integer nextVertex = getNextInteger();
+        int nextVertex = getNextInteger();
         decomposition.addVertex(nextVertex);
         decomposition.addEdge(node, nextVertex);
         decompositionMap.put(nextVertex, nextVertexBag);
@@ -203,7 +226,7 @@ abstract public class NiceDecompositionBuilder<V>
     }
 
     /**
-     * Adds to all current leaves in the decomposition introduce nodes until only empty sets
+     * Adds to all current leaves in the decomposition introduce nodes until only sets of size 1
      * are leaves.
      */
     protected void leafClosure()
@@ -215,11 +238,13 @@ abstract public class NiceDecompositionBuilder<V>
             if (Graphs.vertexHasSuccessors(decomposition, leaf))
                 continue;
 
-            // otherwise add nodes until empty set
+            // otherwise add nodes until one element
             Set<V> vertexSet = decompositionMap.get(leaf);
             Integer current = leaf;
             for (V forget : vertexSet) {
-                current = addIntroduce(forget, current);
+                if(decompositionMap.get(current).size()>1) {
+                    current = addIntroduceNode(forget, current);
+                }
             }
         }
     }
@@ -235,10 +260,10 @@ abstract public class NiceDecompositionBuilder<V>
     }
 
     /**
-     * Returns the map from integer nodes of the tree decomposition {@code getDecomposition()} to
-     * the sets of the vertices from the graph as an unmodifiable map
+     * Returns an unmodifiable map from integer nodes of the tree decomposition {@code getDecomposition()} to
+     * the sets of the vertices from the graph.
      * 
-     * @return the nodes of decomposition to sets of vertices map
+     * @return the map from nodes of decomposition to sets of vertices map
      */
     public Map<Integer, Set<V>> getMap()
     {
@@ -246,11 +271,11 @@ abstract public class NiceDecompositionBuilder<V>
     }
 
     /**
-     * Returns the root of the decomposition {@code getDecomposition()}
+     * Get the root of the decomposition computed by {@code getDecomposition()}
      * 
-     * @return the root the decomposition
+     * @return the root of the decomposition
      */
-    public Integer getRoot()
+    public int getRoot()
     {
         return root;
     }

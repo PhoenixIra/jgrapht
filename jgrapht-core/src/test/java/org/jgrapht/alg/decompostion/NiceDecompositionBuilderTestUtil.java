@@ -1,7 +1,22 @@
+/*
+ * (C) Copyright 2018-2018, by Ira Justus Fesefeldt and Contributors.
+ *
+ * JGraphT : a free Java graph-theory library
+ *
+ * This program and the accompanying materials are dual-licensed under
+ * either
+ *
+ * (a) the terms of the GNU Lesser General Public License version 2.1
+ * as published by the Free Software Foundation, or (at your option) any
+ * later version.
+ *
+ * or (per the licensee's choosing)
+ *
+ * (b) the terms of the Eclipse Public License v1.0 as published by
+ * the Eclipse Foundation.
+ */
 package org.jgrapht.alg.decompostion;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
 
 import java.util.*;
 import java.util.Map.*;
@@ -9,33 +24,42 @@ import java.util.Map.*;
 import org.jgrapht.*;
 import org.jgrapht.graph.*;
 
+/**
+ * Tests for the {@link NiceDecompositionBuilder}
+ *
+ * @author Ira Justus Fesefeldt (PhoenixIra)
+ */
 public final class NiceDecompositionBuilderTestUtil
 {
     //static class
     private NiceDecompositionBuilderTestUtil() {}
     
     /**
-     * tests whether the tree decomposition (decomposition, map) with root is nice
+     * Tests whether the tree decomposition, consisting of the {@code decomposition} and the {@code map} 
+     * with the given {@code root} is nice.
      * 
      * @param decomposition the tree decomposition to check
      * @param map the map of the tree decomposition
      * @param root the root of the tree decomposition
      */
-    public static <V,E,W> void testNiceDecomposition(Graph<V,E> decomposition, Map<V,Set<W>> map, V root){
+    public static <V,E,W> boolean isNiceDecomposition(Graph<V,E> decomposition, Map<V,Set<W>> map, V root){
         
-        Queue<V> queue = new LinkedList<V>();
+        //empty graph
+        if(decomposition.vertexSet().isEmpty())
+            return true;
+        
+        Queue<V> queue = new ArrayDeque<>();
         
         //test and add root
-        assertTrue(root+" is no valid root"
-                + "\n in decomposition "+decomposition
-                + "\n and map"+map, map.get(root).isEmpty());
+        if(map.get(root).size() != 1)
+            return false;
        queue.add(root);
         
         while(!queue.isEmpty())
         {
             V current = queue.poll();
             List<V> successor = Graphs.successorListOf(decomposition, current);
-            if(successor.size() == 0 && map.get(current).isEmpty()) continue; //leaf node
+            if(successor.size() == 0 && map.get(current).size() == 1) continue; //leaf node
             if(successor.size() == 1) //forget or introduce
             {
                 V next = successor.get(0);
@@ -62,37 +86,37 @@ public final class NiceDecompositionBuilderTestUtil
                 && union.size() == map.get(second).size()) 
                     continue; //join node!
             }
-            assertFalse("Vertex Set "+current+" is not a valid node for a nice decomposition"
-                + "\nin decomposition "+decomposition
-                + "\nwith map "+map, true); //no valid node!
+            //does not fit in any category
+            return false;
         }
-        assertTrue(true);
+        //everything fine
+        return true;
     }
     
     /**
-     * Test whether (decomposition, map) a tree decomposition of oldGraph is
+     * Tests whether the tree decomposition, consisting of the {@code decomposition} and the {@code map}
+     * with the given {@code root} is a tree decomposition of the graph {@code oldGraph}.
      * 
      * @param oldGraph the graph of the tree decomposition
      * @param decomposition the tree decomposition
      * @param map the map from vertices to the tree decomposition to the sets of the tree decomposition
      */
-    public static <V,E,W,F> void testDecomposition(Graph<W,F> oldGraph, Graph<V,E> decomposition, Map<V,Set<W>> map){
+    public static <V,E,W,F> boolean isDecomposition(Graph<W,F> oldGraph, Graph<V,E> decomposition, Map<V,Set<W>> map){
         Set<F> edgeSet = oldGraph.edgeSet();
-        Set<V> vertexSet = decomposition.vertexSet();
+        Set<V> nodeSet = decomposition.vertexSet();
         //Every edge is represented
         for(F e : edgeSet)
         {
-            boolean hasVertex = false;
-            for(V v : vertexSet)
+            boolean hasNode = false;
+            for(V v : nodeSet)
             {
                 if(map.get(v).contains(oldGraph.getEdgeSource(e)) && map.get(v).contains(oldGraph.getEdgeTarget(e))) {
-                    hasVertex = true;
+                    hasNode = true;
                     break; 
                 }
             }
-            assertTrue("Edge "+e+" is not found"
-                + "\nin graph "+decomposition
-                + "\nwith map "+map, hasVertex);
+            if(!hasNode)
+                return false;
         }
         //every vertex has non-empty connected set of vertex sets
         Set<W> oldVertexSet = oldGraph.vertexSet();
@@ -105,11 +129,15 @@ public final class NiceDecompositionBuilderTestUtil
                     keySet.add(entry.getKey());
             }
             //not empty
-            assertFalse("Vertex "+w+" is not represented\n in decomposition "+decomposition+"\n and map "+map, keySet.isEmpty());
+            if(keySet.isEmpty())
+                return false;
             //connected
             Graph<V,E> subgraph = new AsSubgraph<V,E>(decomposition,keySet);
-            assertTrue("Vertex "+w+" is not connected\n in decomposition "+decomposition+"\n and map "+map,GraphTests.isConnected(subgraph));
+            if(!GraphTests.isConnected(subgraph))
+                return false;
         }
+        //everything fine!
+        return true;
     }
     
 }
